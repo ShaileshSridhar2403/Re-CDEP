@@ -5,8 +5,9 @@ This repository is a reimplementation of [deep-explanation-penalization](https:/
 ## Using DVC
 
 ### Initializing DVC
+The following commands should be run only for the first time:
 ```bash
-dvc remote add origin --local https://dagshub.com/<DAGsHub-user-name>/hello-world.dvc
+dvc remote add origin https://dagshub.com/midsterx/deep-explanation-penalization-keras.dvc
 dvc remote modify origin --local auth basic
 dvc remote modify origin --local user <DAGsHub-user-name>
 dvc remote modify origin --local ask_password true
