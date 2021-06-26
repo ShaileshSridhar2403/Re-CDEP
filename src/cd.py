@@ -1,9 +1,9 @@
 from copy import deepcopy
+
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers
 from tensorflow import tanh
-
+from tensorflow.keras import layers
 
 STABILIZING_CONSTANT = 10e-20
 
@@ -60,7 +60,7 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
     # Update the sparse matrix with the pooled values , it is a batch wise operation
     unpooled_ = tf.tensor_scatter_nd_update(ref, ind_, pooled_)
 
-    # Reshape the vector to get the final result 
+    # Reshape the vector to get the final result
     unpooled = tf.reshape(unpooled_, [output_shape[0], output_shape[1], output_shape[2], output_shape[3]])
     return unpooled
 
@@ -102,8 +102,8 @@ def propagate_tanh_two(a, b):
 
 
 # propagate convolutional or linear layer
-def propagate_conv_linear(relevant, irrelevant, module, device='cuda'):
-    bias = module(tf.zeros(irrelevant.size()))
+def propagate_conv_linear(relevant, irrelevant, module):
+    bias = module(tf.zeros(irrelevant.shape))
     rel = module(relevant) - bias
     irrel = module(irrelevant) - bias
 
@@ -117,14 +117,14 @@ def propagate_conv_linear(relevant, irrelevant, module, device='cuda'):
     return rel + tf.multiply(prop_rel, bias), irrel + tf.multiply(prop_irrel, bias)
 
 
-def propagate_AdaptiveAvgPool2d(relevant, irrelevant, module, device='cuda'):
+def propagate_AdaptiveAvgPool2d(relevant, irrelevant, module):
     rel = module(relevant)
     irrel = module(irrelevant)
     return rel, irrel
 
 
 # propagate ReLu nonlinearity
-def propagate_relu(relevant, irrelevant, activation, device='cuda'):
+def propagate_relu(relevant, irrelevant, activation):
     # swap_inplace = False
     # try:  # handles inplace
     #     if activation.inplace:
@@ -140,6 +140,7 @@ def propagate_relu(relevant, irrelevant, activation, device='cuda'):
     return rel_score, irrel_score
 
 
+# TODO: test
 # propagate maxpooling operation
 def propagate_pooling(relevant, irrelevant, pooler, model_type='mnist'):
     window_size = 4
@@ -173,13 +174,15 @@ def propagate_pooling(relevant, irrelevant, pooler, model_type='mnist'):
         return rel, irrel
 
 
+# TODO: test
 # propagate dropout operation
 def propagate_dropout(relevant, irrelevant, dropout):
     return dropout(relevant), dropout(irrelevant)
 
 
+# TODO: test
 # get contextual decomposition scores for blob
-def cd(blob, im_torch, model, model_type='mnist', device='cuda'):
+def cd(blob, im_torch, model, model_type='mnist'):
     # set up model
     model.eval()
 
