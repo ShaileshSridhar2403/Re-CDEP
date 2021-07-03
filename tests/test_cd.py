@@ -6,6 +6,45 @@ sys.path.append('../src')
 import cd
 
 
+class Net(tf.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = tf.keras.layers.Conv2D(20, 5, data_format='channels_first')  # input channels = 1
+        self.conv2 = tf.keras.layers.Conv2D(50, 5, data_format='channels_first')  # input channels = 20
+        self.fc1 = tf.keras.layers.Dense(256)  # input shape = 4*4*50
+        self.fc2 = tf.keras.layers.Dense(10)  # input shape = 256
+
+    def __call__(self, x):
+        x = tf.nn.relu(self.conv1(x))
+        x = tf.keras.layers.MaxPool2D(pool_size=2, strides=2)(x)
+        x = tf.nn.relu(self.conv2(x))
+        x = tf.keras.layers.MaxPool2D(pool_size=2, strides=2)(x)
+        x = tf.reshape(x, [-1, 4*4*50])
+        x = tf.nn.relu(self.fc1(x))
+        x = self.fc2(x)
+        return tf.nn.log_softmax(x, axis=1)
+
+    def logits(self, x):
+        x = tf.nn.relu(self.conv1(x))
+        x = tf.keras.layers.MaxPool2D(pool_size=2, strides=2)(x)
+        x = tf.nn.relu(self.conv2(x))
+        x = tf.keras.layers.MaxPool2D(pool_size=2, strides=2)(x)
+        x = tf.reshape(x, [-1, 4*4*50])
+        x = tf.nn.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
+# make the sampling thing
+blob = np.zeros((28,28))
+size_blob =5
+blob[:size_blob, :size_blob ] = 1
+
+blob[-size_blob:, :size_blob] = 1
+blob[:size_blob, -size_blob:] = 1
+blob[-size_blob:, -size_blob:] = 1
+
+
 def test_propagate_conv_linear():
     a = tf.constant([[1.0, 2.0], [3.0, 4.0]])
     b = tf.constant([[1.0, 2.0], [3.0, 4.0]])
@@ -36,24 +75,41 @@ def test_unpool():
 
     b = tf.nn.max_pool2d(a, ksize=2, strides=2, padding='VALID', data_format='NCHW')
 
-    indices = cd.get_indices(a, b)
-    print(indices)
-
     c = cd.unpool(b, indices)
     print(c)
 
+def test_propagate_dropout():
+    a = tf.constant([1.0, 2.0, 3.0, 4.0])
+    b = tf.constant([1.0, 2.0, 3.0, 4.0])
 
-    x = tf.constant([[1., 2., 3.],
-                     [4., 5., 6.],
-                     [7., 8., 9.]])
-    x = tf.reshape(x, [1, 3, 3, 1])
-    max_pool_2d = tf.keras.layers.MaxPooling2D(pool_size=(2, 2),
-       strides=(1, 1), padding='valid')
-    print(max_pool_2d.strides)
-    a = max_pool_2d(x)
+    c = tf.keras.layers.Dropout(rate=0.5)
+    result = cd.propagate_dropout(a, b, c)
 
-    print(a)
-    print(a.strides)
+    print(result)
 
+def test_propagate_pooling():
+    a = tf.constant([[[[4., 5, 6, 7],
+                    [8, 9, 10, 11],
+                    [12, 13, 14, 15],
+                    [16, 17, 18, 19]]]])
+    b = tf.constant([[[[1., 2, 3, 4],
+                    [5, 6, 7, 8],
+                    [9, 10, 11, 12],
+                    [13, 14, 15, 16]]]])
 
-test_propagate_conv_linear()
+    c = tf.keras.layers.MaxPool2D(pool_size=2, data_format='channels_first')
+    result = cd.propagate_pooling(a, b, c)
+
+    print(result)
+
+def test_cd():
+    model = Net()
+
+    # float64 is double
+    x = np.arange(784).reshape(1, 1, 28, 28)
+    print(x.shape)
+    a = tf.constant(x, dtype=tf.float64)
+    result = cd.cd(blob=blob, im_torch=a, model=model)
+    print(result)
+
+test_cd()

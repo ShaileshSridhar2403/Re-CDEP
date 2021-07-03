@@ -65,31 +65,6 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
     return unpooled
 
 
-def get_indices(original_tensor, max_pooled_tensor):
-    """
-    Gets the argmax indices.
-
-    :param tensorflow.Tensor original_tensor: Original tensor.
-    :param tensorflow.Tensor max_pooled_tensor: Max pooled tensor.
-    :return: The tensor of argmax indices.
-    :rtype: tensorflow.Tensor
-    """
-    i = tf.reshape(original_tensor, shape=[-1])
-    j = tf.reshape(max_pooled_tensor, shape=[-1])
-
-    x = i.numpy()
-    y = j.numpy()
-
-    z = np.array([])
-    for ele in y:
-        z = np.append(z, np.where(x == ele)[0])
-
-    indices = tf.convert_to_tensor(z, dtype=tf.int64)
-    indices = tf.reshape(indices, tf.shape(max_pooled_tensor))
-
-    return indices
-
-
 def propagate_three(a, b, c, activation):
     a_contrib = 0.5 * (activation(a + c) - activation(c) + activation(a + b + c) - activation(b + c))
     b_contrib = 0.5 * (activation(b + c) - activation(c) + activation(a + b + c) - activation(a + c))
@@ -140,51 +115,50 @@ def propagate_relu(relevant, irrelevant, activation):
     return rel_score, irrel_score
 
 
-# TODO: test
 # propagate maxpooling operation
-def propagate_pooling(relevant, irrelevant, pooler, model_type='mnist'):
+def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
     window_size = 4
 
     # get both indices
-    p = deepcopy(pooler)
-    p.return_indices = True
-    both = p(relevant + irrelevant)
-    both_ind = get_indices(relevant+irrelevant, both)
+    temp = relevant + irrelevant
+    temp = tf.transpose(temp, perm=[0, 2, 3, 1])
+    both, both_ind = tf.nn.max_pool_with_argmax(temp, ksize=2, strides=2, padding='VALID', include_batch_in_index=True)
+    both = tf.transpose(both, perm=[0, 3, 1, 2])
+    both_ind = tf.transpose(both_ind, perm=[0, 3, 1, 2])
     ones_out = tf.ones_like(both)
-    size1 = relevant.size()
+    size1 = relevant.shape
 
     if model_type == 'mnist':
         mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=(2, 2), strides=(2, 2))
         # relevant
         rel = mask_both * relevant
-        rel = tf.nn.avg_pool2d(rel, ksize=2, strides=2, padding='valid') * window_size
+        rel = tf.nn.avg_pool2d(rel, ksize=2, strides=2, padding='VALID', data_format='NCHW') * window_size
         # irrelevant
         irrel = mask_both * irrelevant
-        irrel = tf.nn.avg_pool2d(irrel, ksize=2, strides=2, padding='valid') * window_size
+        irrel = tf.nn.avg_pool2d(irrel, ksize=2, strides=2, padding='VALID', data_format='NCHW') * window_size
         return rel, irrel
 
     elif model_type == 'vgg':
-        mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=pooler.pool_size, strides=pooler.strides)
+        mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides)
         # relevant
         rel = mask_both * relevant
-        rel = tf.nn.avg_pool2d(rel, ksize=pooler.pool_size, strides=pooler.strides, padding='same') * window_size
+        rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
         # irrelevant
         irrel = mask_both * irrelevant
-        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.pool_size, strides=pooler.strides, padding='same') * window_size
+        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
         return rel, irrel
 
 
-# TODO: test
 # propagate dropout operation
 def propagate_dropout(relevant, irrelevant, dropout):
-    return dropout(relevant), dropout(irrelevant)
+    return dropout(relevant, training=True), dropout(irrelevant, training=True)
 
 
 # TODO: test
 # get contextual decomposition scores for blob
 def cd(blob, im_torch, model, model_type='mnist'):
     # set up model
-    model.eval()
+    # model.eval()
 
     # set up blobs
     blob = tf.constant(blob)
@@ -193,44 +167,37 @@ def cd(blob, im_torch, model, model_type='mnist'):
 
     if model_type == 'mnist':
         # scores = []
-        mods = list(model.modules())[1:]
+        mods = list(model.submodules)
         relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mods[0])
-
-        relevant, irrelevant = propagate_pooling(relevant, irrelevant,
-                                                 lambda x: layers.MaxPool2D(pool_size=x, strides=2),
-                                                 model_type='mnist')
-        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU)
+        relevant, irrelevant = propagate_pooling(relevant, irrelevant, model_type='mnist')
+        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU())
 
         relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mods[1])
+        relevant, irrelevant = propagate_pooling(relevant, irrelevant, model_type='mnist')
+        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU())
 
-        relevant, irrelevant = propagate_pooling(relevant, irrelevant,
-                                                 lambda x: layers.MaxPool2D(pool_size=x, strides=2),
-                                                 model_type='mnist')
-
-        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU)
-
-        relevant = relevant.view(-1, 800)
-        irrelevant = irrelevant.view(-1, 800)
+        relevant = tf.reshape(relevant, [-1, 800])
+        irrelevant = tf.reshape(irrelevant, [-1, 800])
 
         relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mods[2])
 
-        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU)
+        relevant, irrelevant = propagate_relu(relevant, irrelevant, layers.ReLU())
         relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mods[3])
 
-    else:
-        mods = list(model.modules())
-        for _, mod in enumerate(mods):
-            t = str(type(mod))
-            if 'Conv2d' in t or 'Linear' in t:
-                if 'Linear' in t:
-                    relevant = relevant.view(relevant.size(0), -1)
-                    irrelevant = irrelevant.view(irrelevant.size(0), -1)
-                relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mod)
-            elif 'ReLU' in t:
-                relevant, irrelevant = propagate_relu(relevant, irrelevant, mod)
-            elif 'MaxPool2d' in t:
-                relevant, irrelevant = propagate_pooling(relevant, irrelevant, mod, model_type=model_type)
-            elif 'Dropout' in t:
-                relevant, irrelevant = propagate_dropout(relevant, irrelevant, mod)
+    # else:
+    #     mods = list(model.submodules)
+    #     for _, mod in enumerate(mods):
+    #         t = str(type(mod))
+    #         if 'Conv2d' in t or 'Linear' in t:
+    #             if 'Linear' in t:
+    #                 relevant = relevant.view(relevant.size(0), -1)
+    #                 irrelevant = irrelevant.view(irrelevant.size(0), -1)
+    #             relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, mod)
+    #         elif 'ReLU' in t:
+    #             relevant, irrelevant = propagate_relu(relevant, irrelevant, mod)
+    #         elif 'MaxPool2d' in t:
+    #             relevant, irrelevant = propagate_pooling(relevant, irrelevant, model_type=model_type)
+    #         elif 'Dropout' in t:
+    #             relevant, irrelevant = propagate_dropout(relevant, irrelevant, mod)
 
     return relevant, irrelevant
