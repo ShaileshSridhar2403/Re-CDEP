@@ -154,7 +154,6 @@ def propagate_dropout(relevant, irrelevant, dropout):
     return dropout(relevant, training=True), dropout(irrelevant, training=True)
 
 
-# TODO: test
 # get contextual decomposition scores for blob
 def cd(blob, im_torch, model, model_type='mnist'):
     # set up model
