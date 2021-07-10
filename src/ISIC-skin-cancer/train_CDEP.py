@@ -126,7 +126,6 @@ if regularizer_rate ==-1: # -1 means that we train only on data with no patches
     datasets['train'] = datasets['train_no_patches']
 
 try:
-    # dataset_sizes= {x:len(datasets[x]) for x in datasets.keys()}
     dataset_sizes = {}
     for x in datasets:
         dataset_sizes[x] = len(list(datasets[x].as_numpy_iterator()))

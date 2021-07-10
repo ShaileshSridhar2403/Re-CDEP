@@ -14,11 +14,14 @@ def resize_and_save(my_list, my_folder):
     for i,file_name in tqdm(enumerate(my_list)):
         try:
             img = Image.open(os.path.join(img_path, file_name))
-            test = np.asarray(img)
-            test_new = cv2.resize(test, (299, 299, 3))
-            cv2.imwrite(os.path.join(my_folder, file_name), test_new)
-        except:
-            print(file_name)
+            # test = np.asarray(img)
+            # test_new = cv2.resize(img, (299, 299))
+            test_new = img.resize((224,224))
+            # cv2.imwrite(os.path.join(my_folder, file_name), test_new)
+            test_new.save(os.path.join(my_folder, file_name))
+            print(f"Resized and saved {os.path.join(img_path, file_name)} to {os.path.join(my_folder, file_name)}")
+        except Exception as e:
+            print(f"Failed to resize and save {file_name} due to {e}")
 
 data_path = config['data_folder']
 
