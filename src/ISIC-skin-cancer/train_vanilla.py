@@ -43,7 +43,6 @@ regularizer_rate = args.regularizer_rate
 
 num_epochs = args.epochs
 
-print("LR is", args.lr)
 
 
 
@@ -55,27 +54,14 @@ class CustomModel(tf.keras.Model):
             y_pred = self(inputs, training=True)  # Forward pass
             # Compute the loss value
             # (the loss function is configured in `compile()`)
-
-            add_loss = tf.zeros(1,)
-            
-            if regularizer_rate > 0:
-            
-                mask  = (cd_features[:, 0,0] != -1) #NOTE:CHECK
-                if mask.any():
-                    rel, irrel = cd.cd_vgg_classifier(cd_features[:,0], cd_features[:,1], inputs, model)
-        
-                    cur_cd_loss = tf.nn.functional.softmax(tf.stack((tf.boolean_mask(rel[:,0],mask)),tf.boolean_mask(irrel[:,0],mask),axis=1))
-                    cur_cd_loss = tf.nn.functional.softmax(tf.stack((tf.boolean_mask(irrel[:,1],mask)),tf.boolean_mask(rel[:,0],mask),axis=1))
-                    add_loss = cur_cd_loss/2
             loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
-            full_loss = loss+regularizer_rate*add_loss
 
             
 
             
         # Compute gradients
         trainable_vars = self.trainable_variables
-        gradients = tape.gradient(full_loss, trainable_vars)
+        gradients = tape.gradient(loss, trainable_vars)
         # Update weights
         self.optimizer.apply_gradients(zip(gradients, trainable_vars))
         self.compiled_metrics.update_state(y, y_pred)
