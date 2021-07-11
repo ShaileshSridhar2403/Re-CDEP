@@ -30,15 +30,19 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
     """
     # Get the the shape of the tensor in the form of a list
     input_shape = pooled.get_shape().as_list()
-    n = input_shape[0]
-    c = input_shape[1]
-    h_out = (input_shape[2] - 1) * strides[0] - 2 * padding[0] + ksize[0]
-    w_out = (input_shape[3] - 1) * strides[1] - 2 * padding[1] + ksize[1]
 
     # Determine the output shape
     if output_size == 'NCHW':
+        n = input_shape[0]
+        c = input_shape[1]
+        h_out = (input_shape[2] - 1) * strides[0] - 2 * padding[0] + ksize[0]
+        w_out = (input_shape[3] - 1) * strides[1] - 2 * padding[1] + ksize[1]
         output_shape = (n, c, h_out, w_out)
     elif output_size == 'NHWC':
+        n = input_shape[0]
+        c = input_shape[3]
+        h_out = (input_shape[1] - 1) * strides[0] - 2 * padding[0] + ksize[0]
+        w_out = (input_shape[2] - 1) * strides[1] - 2 * padding[1] + ksize[1]
         output_shape = (n, h_out, w_out, c)
     else:
         output_shape = output_size
@@ -121,15 +125,17 @@ def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
 
     # get both indices
     temp = relevant + irrelevant
-    temp = tf.transpose(temp, perm=[0, 2, 3, 1])
+    if model_type == 'mnist':
+        temp = tf.transpose(temp, perm=[0, 2, 3, 1])
     both, both_ind = tf.nn.max_pool_with_argmax(temp, ksize=2, strides=2, padding='VALID', include_batch_in_index=True)
-    both = tf.transpose(both, perm=[0, 3, 1, 2])
-    both_ind = tf.transpose(both_ind, perm=[0, 3, 1, 2])
+    if model_type == 'mnist':
+        both = tf.transpose(both, perm=[0, 3, 1, 2])
+        both_ind = tf.transpose(both_ind, perm=[0, 3, 1, 2])
     ones_out = tf.ones_like(both)
     size1 = relevant.shape
 
     if model_type == 'mnist':
-        mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=(2, 2), strides=(2, 2))
+        mask_both = unpool(ones_out, both_ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2))
         # relevant
         rel = mask_both * relevant
         rel = tf.nn.avg_pool2d(rel, ksize=2, strides=2, padding='VALID', data_format='NCHW') * window_size
@@ -139,13 +145,13 @@ def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
         return rel, irrel
 
     elif model_type == 'vgg':
-        mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides)
+        mask_both = unpool(ones_out, both_ind, output_size='NHWC', ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'])
         # relevant
         rel = mask_both * relevant
-        rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
+        rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], padding='VALID', data_format='NHWC') * window_size
         # irrelevant
         irrel = mask_both * irrelevant
-        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
+        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], padding='VALID', data_format='NHWC') * window_size
         return rel, irrel
 
 
