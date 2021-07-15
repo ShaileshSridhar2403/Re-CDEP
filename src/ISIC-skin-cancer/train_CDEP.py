@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import classification_report
 from sklearn.metrics import roc_curve,auc
+import pdb
 
 model_path = os.path.join(data["model_folder"], "ISIC_new")
 dataset_path =os.path.join(data["data_folder"],"calculated_features")
@@ -50,7 +51,10 @@ print("LR is", args.lr)
 class CustomModel(tf.keras.Model):
     def train_step(self, data):
         inputs,y,cd_features = data
-        print("SHAPE", inputs.shape,y.shape)
+        # cd_features = cd_features.eval(session=tf.compat.v1.Session())
+        # pdb.set_trace()
+        # cd_features = cd_features.numpy()
+        # print("SHAPE", inputs.shape,y.shape)
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)  # Forward pass
             # Compute the loss value
@@ -61,11 +65,27 @@ class CustomModel(tf.keras.Model):
             if regularizer_rate > 0:
             
                 mask  = (cd_features[:, 0,0] != -1) #NOTE:CHECK
-                if mask.any():
+                # print("Mask",mask)
+                # exit(0);
+                # print("CD Features",cd_features)
+                # if mask.any():
+                if tf.experimental.numpy.any(mask):
                     rel, irrel = cd.cd_vgg_classifier(cd_features[:,0], cd_features[:,1], inputs, model)
-        
-                    cur_cd_loss = tf.nn.functional.softmax(tf.stack((tf.boolean_mask(rel[:,0],mask)),tf.boolean_mask(irrel[:,0],mask),axis=1))
-                    cur_cd_loss = tf.nn.functional.softmax(tf.stack((tf.boolean_mask(irrel[:,1],mask)),tf.boolean_mask(rel[:,0],mask),axis=1))
+                    cur_cd_loss = tf.nn.softmax(
+                        tf.stack(
+                                (
+                                    # tf.boolean_mask(rel[:,0],mask),tf.boolean_mask(irrel[:,0],mask) NOTE: Cross Check with dimensions in original repo
+                                    tf.boolean_mask(rel,mask),tf.boolean_mask(irrel,mask)
+                                )
+                                ,axis=1
+                            )
+                        )
+                    cur_cd_loss = tf.nn.softmax(
+                        tf.stack(
+                            # (tf.boolean_mask(irrel[:,1],mask),tf.boolean_mask(rel[:,0],mask)),axis=1)
+                            (tf.boolean_mask(irrel,mask),tf.boolean_mask(rel,mask)),axis=1
+                        )
+                    )
                     add_loss = cur_cd_loss/2
             loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
             full_loss = loss+regularizer_rate*add_loss
@@ -105,7 +125,7 @@ def create_classification_model():
     classification_model.layers[1].set_weights(vgg.get_layer('fc2').get_weights())
 
     x = classification_model.output
-    output_layer = tf.keras.layers.Dense(1,activation='sigmoid') #check if 4096 is just prev layer output or something more
+    output_layer = tf.keras.layers.Dense(1,activation='sigmoid',name='predictions') #check if 4096 is just prev layer output or something more
     outputs = output_layer(x)
     model = CustomModel(classification_model.input,outputs)
 
@@ -141,12 +161,12 @@ opt = tf.keras.optimizers.SGD(lr=args.lr, momentum=args.momentum)
 #NOTE: Check if loss should be sparse categorical
 #NOTE2: Changed loss from categorical crossentropy, due to this issue https://stackoverflow.com/questions/61742556/valueerror-shapes-none-1-and-none-2-are-incompatible:
 model.compile(loss="binary_crossentropy", optimizer=opt,
-	metrics=["accuracy"])
+	metrics=["accuracy"],run_eagerly=True)
  
 def train_model(model,train_dataset,val_dataset, num_epochs=25):
     since = time.time()
     
-    H = model.fit(train_dataset,validation_data= val_dataset,epochs = num_epochs)
+    H = model.fit(train_dataset,validation_data= val_dataset,epochs = num_epochs,class_weight=weights)
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -163,6 +183,7 @@ def train_model(model,train_dataset,val_dataset, num_epochs=25):
     plt.ylabel("Loss/Accuracy")
     plt.legend(loc="lower left")
     plt.savefig("plot.png")
+    plt.show()
 
     #NOTE: Did not use patience or best model like in original repo
     return model,{}

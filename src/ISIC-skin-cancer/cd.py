@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
-
+from utils import check_and_convert_to_NHWC
+import pdb
 
 STABILIZING_CONSTANT = 10e-20
 
@@ -40,18 +41,27 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
     """
     # Get the the shape of the tensor in the form of a list
     input_shape = pooled.get_shape().as_list()
+
+    # n = input_shape[0]
+    # c = input_shape[1]
+    # h_out = (input_shape[2] - 1) * strides[0] - 2 * padding[0] + ksize[0]
+    # w_out = (input_shape[3] - 1) * strides[1] - 2 * padding[1] + ksize[1]
     n = input_shape[0]
-    c = input_shape[1]
-    h_out = (input_shape[2] - 1) * strides[0] - 2 * padding[0] + ksize[0]
-    w_out = (input_shape[3] - 1) * strides[1] - 2 * padding[1] + ksize[1]
+    c = input_shape[3]
+    h_out = (input_shape[1] - 1) * strides[0] - 2 * padding[0] + ksize[0]
+    w_out = (input_shape[2] - 1) * strides[1] - 2 * padding[1] + ksize[1]
 
     # Determine the output shape
     if output_size == 'NCHW':
         output_shape = (n, c, h_out, w_out)
     elif output_size == 'NHWC':
         output_shape = (n, h_out, w_out, c)
+        print('hi')
     else:
         output_shape = output_size
+    print("input_shape",input_shape)
+    print("output_shape",output_shape)
+    
 
     # Reshape into one giant tensor for better workability
     pooled_ = tf.reshape(pooled, [input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3]])
@@ -72,6 +82,7 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
 
     # Reshape the vector to get the final result
     unpooled = tf.reshape(unpooled_, [output_shape[0], output_shape[1], output_shape[2], output_shape[3]])
+    print("unpooled shape",unpooled.shape)
     return unpooled
 
 
@@ -80,10 +91,10 @@ def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
 
     # get both indices
     temp = relevant + irrelevant
-    temp = tf.transpose(temp, perm=[0, 2, 3, 1])
+    #temp = tf.transpose(temp, perm=[0, 2, 3, 1])
     both, both_ind = tf.nn.max_pool_with_argmax(temp, ksize=2, strides=2, padding='VALID', include_batch_in_index=True)
-    both = tf.transpose(both, perm=[0, 3, 1, 2])
-    both_ind = tf.transpose(both_ind, perm=[0, 3, 1, 2])
+    #both = tf.transpose(both, perm=[0, 3, 1, 2])
+    #both_ind = tf.transpose(both_ind, perm=[0, 3, 1, 2])
     ones_out = tf.ones_like(both)
     size1 = relevant.shape
 
@@ -98,17 +109,19 @@ def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
         return rel, irrel
 
     elif model_type == 'vgg':
-        mask_both = unpool(ones_out, both_ind, output_size=size1, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides)
+        print("pooler config",pooler.get_config())
+        mask_both = unpool(ones_out, both_ind, output_size='NHWC', ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'])
         # relevant
         rel = mask_both * relevant
-        rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
+        
+
+        rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], padding='VALID', data_format='NHWC') * window_size
         # irrelevant
         irrel = mask_both * irrelevant
-        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.get_config().pool_size, strides=pooler.get_config().strides, padding='VALID', data_format='NCHW') * window_size
+        irrel = tf.nn.avg_pool2d(irrel, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], padding='VALID', data_format='NHWC') * window_size
         return rel, irrel
 
-def propagate_relu(relevant, irrelevant, activation):
-
+def propagate_relu(relevant, irrelevant):
     # rel_score = activation(relevant)
     # irrel_score = activation(relevant + irrelevant) - activation(relevant)
     rel_score= tf.nn.relu(relevant)
@@ -117,7 +130,7 @@ def propagate_relu(relevant, irrelevant, activation):
 
 
 def propagate_conv_linear(relevant, irrelevant, module):
-
+    
     module = get_layer_without_activation(module)
     bias = module(tf.zeros(irrelevant.shape))
     rel = module(relevant) - bias
@@ -135,8 +148,11 @@ def propagate_conv_linear(relevant, irrelevant, module):
 
 
 def cd_vgg_features(blob,img, model, model_type='vgg'):
-    relevant = blob*img
-    irrelevant = (1-blob)*img
+    relevant = tf.where(blob,img,tf.zeros(img.shape))
+    irrelevant = tf.where(1-blob,img,tf.zeros(img.shape))
+
+    relevant = check_and_convert_to_NHWC(relevant)
+    irrelevant = check_and_convert_to_NHWC(irrelevant)
     
     '''
     input_1 (InputLayer)         [(None, 224, 224, 3)]     0         
@@ -151,7 +167,8 @@ def cd_vgg_features(blob,img, model, model_type='vgg'):
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
     relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, model.get_layer('block1_conv2'))
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
-    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model.get_layer('block1_pool'), model_type=model_type)
+    # pdb.set_trace()
+    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model_type=model_type,pooler= model.get_layer('block1_pool'))
 
     '''
     block2_conv1 (Conv2D)        (None, 112, 112, 128)     73856     
@@ -164,7 +181,7 @@ _________________________________________________________________
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
     relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, model.get_layer('block2_conv2'))
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
-    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model.get_layer('block2_pool'), model_type=model_type)
+    relevant, irrelevant = propagate_pooling(relevant, irrelevant, pooler=model.get_layer('block2_pool'), model_type=model_type)
     '''
     block3_conv1 (Conv2D)        (None, 56, 56, 256)       295168    
     _________________________________________________________________
@@ -180,7 +197,7 @@ _________________________________________________________________
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
     relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, model.get_layer('block3_conv3'))
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
-    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model.get_layer('block3_pool'), model_type=model_type)
+    relevant, irrelevant = propagate_pooling(relevant, irrelevant, pooler=model.get_layer('block3_pool'), model_type=model_type)
 
     '''
     block4_conv1 (Conv2D)        (None, 28, 28, 512)       1180160   
@@ -197,7 +214,7 @@ _________________________________________________________________
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
     relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, model.get_layer('block4_conv3'))
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
-    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model.get_layer('block4_pool'), model_type=model_type)
+    relevant, irrelevant = propagate_pooling(relevant, irrelevant, pooler=model.get_layer('block4_pool'), model_type=model_type)
 
     '''
     block5_conv1 (Conv2D)        (None, 14, 14, 512)       2359808   
@@ -214,13 +231,17 @@ _________________________________________________________________
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
     relevant, irrelevant = propagate_conv_linear(relevant, irrelevant, model.get_layer('block5_conv3'))
     relevant, irrelevant = propagate_relu(relevant, irrelevant)
-    relevant, irrelevant = propagate_pooling(relevant, irrelevant, model.get_layer('block5_pool'), model_type=model_type)
+    relevant, irrelevant = propagate_pooling(relevant, irrelevant, pooler=model.get_layer('block5_pool'), model_type=model_type)
 
-    relevant, irrelevant = propagate_AdaptiveAvgPool2d(relevant, irrelevant, mods[31]) #CHECKTHIS
+    # relevant, irrelevant = propagate_AdaptiveAvgPool2d(relevant, irrelevant, mods[31]) #CHECKTHIS
 
 
-    relevant = relevant.reshape(relevant.size(0), -1)
-    irrelevant = irrelevant.reshape(irrelevant.size(0), -1)
+    # relevant = relevant.reshape(relevant.size(0), -1)
+    # irrelevant = irrelevant.reshape(irrelevant.size(0), -1)
+    relevant = tf.reshape(relevant,(relevant.shape[0],-1))
+    irrelevant = tf.reshape(irrelevant,(irrelevant.shape[0],-1))
+
+    # exit(0);
 
     return relevant,irrelevant
 

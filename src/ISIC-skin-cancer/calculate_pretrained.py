@@ -50,17 +50,23 @@ for i in tqdm(range(len(list_of_image_names))):
         img = img.resize((224,224))
         # pdb.set_trace()
         img = ((np.asarray(img)/255.0 -mean)/std).swapaxes(0,2).swapaxes(1,2)[None,:]
-        img = check_and_convert_to_NHWC(img)
-        img_features[i] = features(model,img)
+        # img_orig = img
+        # img = check_and_convert_to_NHWC(img)
+        img_features[i] = features(model,check_and_convert_to_NHWC(img))
         
         if os.path.isfile(os.path.join(segmentation_path, list_of_image_names[i])):
             seg = Image.open(os.path.join(segmentation_path, list_of_image_names[i]))
+            print("seg",np.array(seg).shape)
             seg = seg.resize((224,224))
-            try:
-                print("seg shape",seg.shape)
-            except:
-                continue
+            print("seg2",np.array(seg).shape)
+            # print(seg.shape())
+            # try:
+            #     print("seg shape",seg.shape())
+            # except Exception as e:
+            #     print(f"SKIPPPING due to {e}")
+                # continue
             blob =  dilation((np.asarray(seg)[:,:, 0] > 100).astype(np.uint8),my_square).astype(np.float32)
+            # print("masked",tf.where(blob,img,tf.zeros(img.shape)))
             
             rel, irrel =cd.cd_vgg_features(blob, img, model)
             cd_features[i, 0] = np.array(rel[0])

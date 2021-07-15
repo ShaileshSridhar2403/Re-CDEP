@@ -10,6 +10,14 @@ import numpy as np
 # from torchvision.transforms import ToTensor, Compose, Normalize
 # import torch
 import os
+
+def check_and_convert_to_NHWC(img):
+    print(img.shape)
+    if img.shape[-1] != 3:
+        img = tf.transpose(img, [0, 2, 3, 1])
+        print("converted shape",img.shape)
+    return img
+
 def filter_dataset(x,y,z):
     # return z[0] == -1
     return True
@@ -23,6 +31,10 @@ def calc_weights(num_cancer, num_complete):
     not_cancer_weight = 1/ not_cancer_ratio
     weights = np.asarray([not_cancer_weight, cancer_weight])
     weights /= weights.sum()
+    weights_dict = {
+        0: weights[0],
+        1: weights[1]
+    }
     return weights
         
 def load_precalculated_dataset(path):
@@ -33,6 +45,11 @@ def load_precalculated_dataset(path):
     with open(os.path.join(path, "not_cancer_cd.npy"), 'rb') as f:
         not_cancer_cd= np.load(f)  
 
+
+    print("not cancer cd",not_cancer_cd)
+    print("cancer",cancer_features)
+    print("not_cancer_cd",not_cancer_features);
+    # exit(0)
 
     cancer_targets = np.ones((cancer_features.shape[0])).astype(np.int64)
     not_cancer_targets = np.zeros((not_cancer_features.shape[0])).astype(np.int64)
@@ -69,10 +86,10 @@ def load_precalculated_dataset(path):
     train_filtered_dataset = train_dataset.filter(filter_dataset)
     test_filtered_dataset = test_dataset.filter(filter_dataset)
     val_filtered_dataset = val_dataset.filter(filter_dataset)
-    print("LENGTH",list(val_filtered_dataset.as_numpy_iterator()))
+    # print("LENGTH",list(val_filtered_dataset.as_numpy_iterator()))
 
     # datasets = {'train': train_dataset,'train_no_patches': train_filtered_dataset, 'val':val_dataset ,'val_no_patches':val_filtered_dataset ,'test':test_dataset, 'test_no_patches':test_filtered_dataset }
-    datasets = {'train':train_dataset,'train_no_patches':train_dataset,'val':val_dataset,'val_no_patches':val_dataset,'test':test_dataset,'test_no_patches':test_dataset}
+    datasets = {'train':train_dataset,'train_no_patches':train_filtered_dataset,'val':val_dataset,'val_no_patches':val_filtered_dataset,'test':test_dataset,'test_no_patches':test_filtered_dataset}
     return datasets, calc_weights(len(cancer_dataset), len(complete_dataset))
 
     
