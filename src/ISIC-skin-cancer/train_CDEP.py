@@ -166,7 +166,7 @@ model.compile(loss="binary_crossentropy", optimizer=opt,
 def train_model(model,train_dataset,val_dataset, num_epochs=25):
     since = time.time()
     
-    H = model.fit(train_dataset,validation_data= val_dataset,epochs = num_epochs,class_weight=weights)
+    H = model.fit(train_dataset,validation_data= val_datasprintet,epochs = num_epochs,class_weight=weights)
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(

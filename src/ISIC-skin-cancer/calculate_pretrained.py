@@ -11,10 +11,10 @@ import cd
 import pdb
 
 def check_and_convert_to_NHWC(img):
-    print(img.shape)
+    # print(img.shape)
     if img.shape[-1] != 3:
         img = tf.transpose(img, [0, 2, 3, 1])
-        print("converted shape",img.shape)
+        # print("converted shape",img.shape)
     return img
 
 def features(vgg_model,img):
@@ -56,9 +56,9 @@ for i in tqdm(range(len(list_of_image_names))):
         
         if os.path.isfile(os.path.join(segmentation_path, list_of_image_names[i])):
             seg = Image.open(os.path.join(segmentation_path, list_of_image_names[i]))
-            print("seg",np.array(seg).shape)
+            # print("seg",np.array(seg).shape)
             seg = seg.resize((224,224))
-            print("seg2",np.array(seg).shape)
+            # print("seg2",np.array(seg).shape)
             # print(seg.shape())
             # try:
             #     print("seg shape",seg.shape())
@@ -73,9 +73,10 @@ for i in tqdm(range(len(list_of_image_names))):
             cd_features[i, 1] = np.array(irrel[0])
 
         else:
-            print(os.path.join(segmentation_path, list_of_image_names[i]))
+            # print(os.path.join(segmentation_path, list_of_image_names[i]))
+            pass
 
-
+print(size(cd_features))
 with open(os.path.join(feature_path, "not_cancer.npy"), 'wb') as f:
     np.save(f, img_features)
 with open(os.path.join(feature_path, "not_cancer_cd.npy"), 'wb') as f:
