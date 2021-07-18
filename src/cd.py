@@ -57,15 +57,18 @@ def unpool(pooled, ind, output_size='NCHW', ksize=(2, 2), strides=(2, 2), paddin
     batch_range = tf.reshape(tf.range(output_shape[0], dtype=ind.dtype), shape=[input_shape[0], 1, 1, 1])
     b = tf.ones_like(ind) * batch_range
     b_ = tf.reshape(b, [input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3], 1])
-    ind_ = tf.reshape(ind, [input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3], 1])
-    ind_ = tf.concat([b_, ind_],1)
+    ind_1 = tf.reshape(ind, [input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3], 1])
+    ind_2 = tf.concat([b_, ind_1], 1)
     ref = tf.Variable(tf.zeros([output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]]))
 
     # Update the sparse matrix with the pooled values , it is a batch wise operation
-    unpooled_ = tf.tensor_scatter_nd_update(ref, ind_, pooled_)
+    unpooled_ = tf.tensor_scatter_nd_update(ref, ind_2, pooled_)
+    # unpooled_ = tf.scatter_nd(ind_2, pooled_, ref.shape)
 
     # Reshape the vector to get the final result
     unpooled = tf.reshape(unpooled_, [output_shape[0], output_shape[1], output_shape[2], output_shape[3]])
+    import pdb
+    pdb.set_trace()
     return unpooled
 
 
@@ -206,3 +209,17 @@ def cd(blob, im_torch, model, model_type='mnist'):
     #             relevant, irrelevant = propagate_dropout(relevant, irrelevant, mod)
 
     return relevant, irrelevant
+
+
+def cd_inefficient(blob, im_torch, model, model_type='mnist'):
+    relevant_batch = []
+    irrelevant_batch = []
+
+    for i in im_torch:
+        rel, irrel = cd(blob, tf.expand_dims(i, axis=0), model, model_type='mnist')
+        relevant_batch.append(rel)
+        irrelevant_batch.append(irrel)
+
+    relevant_batch = tf.concat(relevant_batch, axis=0)
+    irrelevant_batch = tf.concat(irrelevant_batch, axis=0)
+    return (relevant_batch, irrelevant_batch)

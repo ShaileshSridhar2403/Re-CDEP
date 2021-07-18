@@ -193,19 +193,19 @@ def test_propagate_conv_linear():
     # print(r3)
 
 def test_unpool():
-    a = torch.FloatTensor([[[[4., 5, 6, 7],
-                        [8, 9, 10, 11],
-                        [12, 13, 14, 15],
-                        [16, 17, 18, 19]]]])
-    print(a)
+    # a = torch.FloatTensor([[[[4., 5, 6, 7],
+    #                     [8, 9, 10, 11],
+    #                     [12, 13, 14, 15],
+    #                     [16, 17, 18, 19]]]])
+    x = np.arange(2352).reshape(3, 1, 28, 28)
+    a = torch.from_numpy(x).float().to('cuda')
 
     b, b_ind = F.max_pool2d(a, 2, return_indices=True)
-    print(b)
-    print()
-    print(b_ind)
 
     unpool = torch.nn.MaxUnpool2d(kernel_size=2, stride=2)
-    print(unpool)
+    c = unpool(b, b_ind)
+    print(c)
+    print(c.shape)
 
 def test_propagate_dropout():
     a = torch.FloatTensor([1.0, 2.0, 3.0, 4.0]).to('cuda')
@@ -217,14 +217,19 @@ def test_propagate_dropout():
     print(result)
 
 def test_propagate_pooling():
-    a = torch.FloatTensor([[[[4., 5, 6, 7],
-                        [8, 9, 10, 11],
-                        [12, 13, 14, 15],
-                        [16, 17, 18, 19]]]]).to('cuda')
-    b = torch.FloatTensor([[[[1., 2, 3, 4],
-                        [5, 6, 7, 8],
-                        [9, 10, 11, 12],
-                        [13, 14, 15, 16]]]]).to('cuda')
+    # a = torch.FloatTensor([[[[4., 5, 6, 7],
+    #                     [8, 9, 10, 11],
+    #                     [12, 13, 14, 15],
+    #                     [16, 17, 18, 19]]]]).to('cuda')
+    # b = torch.FloatTensor([[[[1., 2, 3, 4],
+    #                     [5, 6, 7, 8],
+    #                     [9, 10, 11, 12],
+    #                     [13, 14, 15, 16]]]]).to('cuda')
+
+    x = np.arange(2352).reshape(3, 1, 28, 28)
+    y = np.arange(2352).reshape(3, 1, 28, 28)
+    a = torch.from_numpy(x).float().to('cuda')
+    b = torch.from_numpy(y).float().to('cuda')
 
     c = lambda x: F.max_pool2d(x, 2, return_indices=True)
     result = propagate_pooling(a, b, c)
@@ -236,11 +241,11 @@ def test_cd():
     model.cuda()
 
     # float64 is double
-    x = np.arange(784).reshape(1, 1, 28, 28)
-    print(x.shape)
+    x = np.arange(1568).reshape(2, 1, 28, 28)
+    # x = np.arange(784).reshape(1, 1, 28, 28)
     a = torch.from_numpy(x).to('cuda')
     # a = tf.constant(x, dtype=tf.float64)
     result = cd(blob=blob, im_torch=a, model=model)
     print(result)
 
-test_cd()
+test_unpool()
