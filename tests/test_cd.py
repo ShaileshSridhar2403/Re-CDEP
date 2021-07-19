@@ -76,19 +76,25 @@ def test_unpool():
     #                 [13, 14, 15, 16]]]])
     # a = tf.reshape(a, [1, 4, 4, 1])
 
-    x = np.arange(48).reshape(3, 4, 4, 1)
+    # x = np.arange(64).reshape(2, 2, 4, 4)
+    # x = np.random.randn(3, 1, 4, 4)
+    # x = np.arange(16*112*112*64).reshape(16, 112, 112, 64)
+    # x = np.arange(16*56*56*128).reshape(16, 56, 56, 128)
+    # x = np.arange(16*28*28*256).reshape(16, 28, 28, 256)
+    # x = np.arange(16*14*14*512).reshape(16, 14, 14, 512)
+    # x = np.arange(16*6*6*512).reshape(16, 512, 6, 6)
+    # x = np.arange(16*8*8*512).reshape(16, 512, 8, 8)
+    x = np.arange(18).reshape(2, 1, 3, 3)
     a = tf.constant(x, dtype=tf.float32)
 
-    # a = tf.transpose(a, perm=[0, 2, 3, 1])
+    a = tf.transpose(a, perm=[0, 2, 3, 1])
 
     b, b_ind = tf.nn.max_pool_with_argmax(a, ksize=2, strides=2, padding='VALID', include_batch_in_index=True)
+    c = cd.unpool(b, b_ind)
 
-    # b = tf.transpose(b, perm=[0, 3, 1, 2])
-    # b_ind = tf.transpose(b_ind, perm=[0, 3, 1, 2])
+    c = tf.transpose(c, perm=[0, 3, 1, 2])
 
-    c = cd.unpool(b, b_ind, output_size='NHWC')
     print(c)
-    print(c.shape)
 
 def test_propagate_dropout():
     a = tf.constant([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
@@ -125,7 +131,7 @@ def test_cd():
     x = np.arange(2352).reshape(3, 1, 28, 28)
     # x = np.arange(784).reshape(1, 1, 28, 28)
     a = tf.constant(x, dtype=tf.float64)
-    result = cd.cd_batch(blob=blob, im_torch=a, model=model)
+    result = cd.cd(blob=blob, im_torch=a, model=model)
     print(result)
 
 def test_shape_check():

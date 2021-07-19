@@ -197,15 +197,18 @@ def test_unpool():
     #                     [8, 9, 10, 11],
     #                     [12, 13, 14, 15],
     #                     [16, 17, 18, 19]]]])
-    x = np.arange(2352).reshape(3, 1, 28, 28)
+    # x = np.arange(2352).reshape(3, 1, 28, 28)
+    x = np.arange(18).reshape(2, 1, 3, 3)
+    # x = np.arange(16*6*6*512).reshape(16, 512, 6, 6)
+    # x = np.arange(16*8*8*512).reshape(16, 512, 8, 8)
     a = torch.from_numpy(x).float().to('cuda')
 
     b, b_ind = F.max_pool2d(a, 2, return_indices=True)
 
     unpool = torch.nn.MaxUnpool2d(kernel_size=2, stride=2)
     c = unpool(b, b_ind)
+
     print(c)
-    print(c.shape)
 
 def test_propagate_dropout():
     a = torch.FloatTensor([1.0, 2.0, 3.0, 4.0]).to('cuda')
