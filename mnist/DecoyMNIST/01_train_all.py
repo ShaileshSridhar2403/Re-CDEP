@@ -4,9 +4,11 @@ import os
 # partition = 'low'
 
 # sweep different ways to initialize weights
+num_seeds = 1
 params_to_vary = {
-    'seed': [x for x in range(6)],
+    'seed': [x for x in range(num_seeds)],
     'regularizer_rate': [0, 1, 10, 100, 1000, 10000],
+    # 'test_decoy': [0 for x in range(num_seeds)]
     # 'grad_method': [0, 1, 2]
 }
 

@@ -24,12 +24,13 @@ import cd
 # from score_funcs import eg_scores_2d, gradient_sum
 
 DATA_PATH = '../../data/DecoyMNIST'
+SAVE_PATH = './results'
+os.makedirs(SAVE_PATH, exist_ok=True)
 
-
-def save(p, out_name):
-    # save final
-    os.makedirs(model_path, exist_ok=True)
-    pkl.dump(s._dict(), open(os.path.join(model_path, out_name + '.pkl'), 'wb'))
+# def save(p, out_name):
+#     # save final
+#     os.makedirs(model_path, exist_ok=True)
+#     pkl.dump(s._dict(), open(os.path.join(model_path, out_name + '.pkl'), 'wb'))
 
 
 class Net(tf.keras.Model):
@@ -156,19 +157,21 @@ parser.add_argument('--regularizer_rate', type=float, default=0.0, metavar='N',
                     help='how heavy to regularize lower order interaction (AKA color)')
 parser.add_argument('--grad_method', type=int, default=0, metavar='N',
                     help='how heavy to regularize lower order interaction (AKA color)')
+parser.add_argument('--test_decoy', type=int, default=1,
+                    help='Use the decoy test data during testing')
 # parser.add_argument('--gradient_method', type=string, default="CD", metavar='N',
                     # help='what method is used')
 args = parser.parse_args()
 model_path = "../../models/DecoyMNIST"
 
-s = S()
+# s = S()
 
 regularizer_rate = args.regularizer_rate
-s.regularizer_rate = regularizer_rate
+regularizer_rate = regularizer_rate
 num_blobs = 1
 num_samples = 200
-s.num_blobs = num_blobs
-s.seed = args.seed
+# s.num_blobs = num_blobs
+# s.seed = args.seed
 
 # sys.exit()
 tf.random.set_seed(args.seed)
@@ -270,9 +273,12 @@ plt.title("Training Loss and Accuracy on Dataset")
 plt.xlabel("Epoch #")
 plt.ylabel("Loss/Accuracy")
 plt.legend(loc="lower left")
-plt.savefig("plot_{}.png".format(args.regularizer_rate))
+plt.savefig(os.path.join(SAVE_PATH, "plot_r{}_s{}_t{}.png".format(args.regularizer_rate, args.seed, args.test_decoy)))
 
-data_x = np.load(os.path.join(DATA_PATH, "test_x_decoy.npy"))
+if args.test_decoy:
+    data_x = np.load(os.path.join(DATA_PATH, "test_x_decoy.npy"))
+else:
+    data_x = np.load(os.path.join(DATA_PATH, "test_x.npy"))
 data_y = np.load(os.path.join(DATA_PATH, "test_y.npy"))
 
 predictions = model.model.predict(data_x)
@@ -281,5 +287,5 @@ predictions = model.model.predict(data_x)
 # print(np.argmax(predictions, axis=1))
 report = classification_report(data_y, np.argmax(predictions, axis=1), output_dict=True)
 df = pd.DataFrame(report).transpose()
-df.to_csv("results_{}.csv".format(args.regularizer_rate))
+df.to_csv(os.path.join(SAVE_PATH, "results_r{}_s{}_t{}.csv".format(args.regularizer_rate, args.seed, args.test_decoy)))
 print("Accuracy:", accuracy_score(data_y, np.argmax(predictions, axis=1)))

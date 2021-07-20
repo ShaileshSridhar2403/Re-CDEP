@@ -52,6 +52,8 @@ print('train_x_decoy shape:', color_x.shape)
 np.save(os.path.join(DATA_PATH, 'train_y.npy'), color_y)
 print('train_y shape', color_y.shape)
 
+color_x_non_decoy = x_test.copy()
+color_x_non_decoy = np.expand_dims(color_x_non_decoy, axis=1).astype(np.float32)
 color_x = np.zeros((len(x_test), 1, 28, 28))
 color_x = x_test[:, None].astype(np.float32)
 color_y = y_test.copy()
@@ -61,6 +63,8 @@ for i in range(len(color_x)):
     color_x[i, :, choice_1[i]:choice_1[i]+5, choice_2[i]:choice_2[i]+5] = 0 + 25*color_y[i]
 color_x /= color_x.max()
 color_x = color_x*2 - 1
+np.save(os.path.join(DATA_PATH, 'test_x.npy'), color_x_non_decoy)
+print('test_x shape:', color_x_non_decoy.shape)
 np.save(os.path.join(DATA_PATH, 'test_x_decoy.npy'), color_x)
 print('test_x_decoy shape:', color_x.shape)
 np.save(os.path.join(DATA_PATH, 'test_y.npy'), color_y)
