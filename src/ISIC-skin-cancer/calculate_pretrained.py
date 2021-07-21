@@ -76,7 +76,7 @@ for i in tqdm(range(len(list_of_image_names))):
             # print(os.path.join(segmentation_path, list_of_image_names[i]))
             pass
 
-print(size(cd_features))
+# print(size(cd_features))
 with open(os.path.join(feature_path, "not_cancer.npy"), 'wb') as f:
     np.save(f, img_features)
 with open(os.path.join(feature_path, "not_cancer_cd.npy"), 'wb') as f:

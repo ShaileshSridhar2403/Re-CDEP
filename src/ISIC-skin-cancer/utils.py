@@ -35,7 +35,7 @@ def calc_weights(num_cancer, num_complete):
         0: weights[0],
         1: weights[1]
     }
-    return weights
+    return weights_dict
         
 def load_precalculated_dataset(path):
     with open(os.path.join(path, "cancer.npy"), 'rb') as f:
