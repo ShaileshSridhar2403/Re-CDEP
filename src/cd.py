@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
-from tensorflow import tanh
+from tensorflow import sigmoid, tanh
 from tensorflow.keras import layers
 
 STABILIZING_CONSTANT = 10e-20
@@ -210,3 +210,112 @@ def cd_inefficient(blob, im_torch, model, model_type='mnist'):
     relevant_batch = tf.concat(relevant_batch, axis=0)
     irrelevant_batch = tf.concat(irrelevant_batch, axis=0)
     return (relevant_batch, irrelevant_batch)
+
+
+def cd_text_irreg_scores(batch_text, model, start, stop):
+    weights = model.layers[1].get_weights()
+    # Index one = word vector (i) or hidden state (h), index two = gate
+    W_ii, W_if, W_ig, W_io = tf.split(tf.transpose(weights[0]), 4, 0)
+    W_hi, W_hf, W_hg, W_ho = tf.split(tf.transpose(weights[1]), 4, 0)
+    b_i, b_f, b_g, b_o = tf.split(weights[2], 4, 0)
+    word_vecs = tf.transpose(model.layers[0](batch_text), perm=[1, 2, 0])  # change: we take all check this BxTxEd -> TxEdxB
+    T = word_vecs.shape[0]
+    batch_size = word_vecs.shape[2]
+    hidden_dim = W_hi.shape[0]
+    relevant_h = tf.zeros(( hidden_dim,batch_size))
+    irrelevant_h = tf.zeros(( hidden_dim,batch_size))
+    prev_rel = tf.zeros((  hidden_dim,batch_size))
+    prev_irrel = tf.zeros((  hidden_dim,batch_size))
+
+    for i in range(T):
+        prev_rel_h = relevant_h
+        prev_irrel_h = irrelevant_h
+        rel_i = tf.matmul(W_hi, prev_rel_h)
+        rel_g = tf.matmul(W_hg, prev_rel_h)
+        rel_f = tf.matmul(W_hf, prev_rel_h)
+        rel_o = tf.matmul(W_ho, prev_rel_h)
+        irrel_i = tf.matmul(W_hi, prev_irrel_h)
+        irrel_g = tf.matmul(W_hg, prev_irrel_h)
+        irrel_f = tf.matmul(W_hf, prev_irrel_h)
+        irrel_o = tf.matmul(W_ho, prev_irrel_h)
+
+        w_ii_contrib = tf.matmul(W_ii, word_vecs[i])
+        w_ig_contrib = tf.matmul(W_ig, word_vecs[i])
+        w_if_contrib = tf.matmul(W_if, word_vecs[i])
+        w_io_contrib = tf.matmul(W_io, word_vecs[i])
+
+        # pdb.set_trace()
+        is_in_relevant = tf.cast((start <= i), dtype=tf.float32) * tf.cast((i <= stop), dtype=tf.float32)
+        is_not_in_relevant = 1 - is_in_relevant
+
+        rel_i = rel_i + is_in_relevant * w_ii_contrib
+        rel_g = rel_g + is_in_relevant * w_ig_contrib
+        rel_f = rel_f + is_in_relevant * w_if_contrib
+        rel_o = rel_o + is_in_relevant * w_io_contrib
+
+        irrel_i = irrel_i + is_not_in_relevant * w_ii_contrib
+        irrel_g = irrel_g + is_not_in_relevant * w_ig_contrib
+        irrel_f = irrel_f + is_not_in_relevant * w_if_contrib
+        irrel_o = irrel_o + is_not_in_relevant * w_io_contrib
+
+        rel_contrib_i, irrel_contrib_i, bias_contrib_i = propagate_three(rel_i, irrel_i, b_i[:,None], sigmoid)
+        rel_contrib_g, irrel_contrib_g, bias_contrib_g = propagate_three(rel_g, irrel_g, b_g[:,None], tanh)
+
+        relevant = rel_contrib_i * (rel_contrib_g + bias_contrib_g) + bias_contrib_i * rel_contrib_g
+        irrelevant = irrel_contrib_i * (rel_contrib_g + irrel_contrib_g + bias_contrib_g) + (rel_contrib_i + bias_contrib_i) * irrel_contrib_g
+        bias_contrib = bias_contrib_i * bias_contrib_g
+
+        is_in_relevant_bias = tf.cast((start <= i), dtype=tf.float32) * tf.cast((i < stop), dtype=tf.float32)
+        is_not_in_relevant_bias = 1- is_in_relevant_bias
+        relevant = relevant + is_in_relevant_bias*bias_contrib
+
+        irrelevant = irrelevant + is_not_in_relevant_bias*bias_contrib
+
+        if i > 0:
+            rel_contrib_f, irrel_contrib_f, bias_contrib_f = propagate_three(rel_f, irrel_f, b_f[:,None], sigmoid)
+            relevant = relevant +(rel_contrib_f + bias_contrib_f) * prev_rel
+            irrelevant = irrelevant+(rel_contrib_f + irrel_contrib_f + bias_contrib_f) * prev_irrel + irrel_contrib_f *  prev_rel
+
+        o = sigmoid(tf.matmul(W_io, word_vecs[i]) + tf.matmul(W_ho, prev_rel_h + prev_irrel_h) + b_o[:,None])
+
+        new_rel_h, new_irrel_h = propagate_tanh_two(relevant, irrelevant)
+
+        relevant_h = o * new_rel_h
+        irrelevant_h = o * new_irrel_h
+        prev_rel = relevant
+        prev_irrel = irrelevant
+
+    W_out = model.layers[2].get_weights()[0]
+    W_out = tf.transpose(W_out)
+    # Sanity check: scores + irrel_scores should equal the LSTM's output minus model.hidden_to_label.bias
+
+    scores = tf.matmul(W_out, relevant_h)
+    irrel_scores = tf.matmul(W_out, irrelevant_h)
+
+    return scores, irrel_scores
+
+
+def softmax_out(output):
+    return tf.nn.softmax(tf.stack((output[0],output[1]), axis=1), axis = 1)
+
+
+def cd_penalty_for_one_decoy_all(batch_text, batch_label, model1, start, stop):
+    mask_exists = (start!=-1)
+    # pdb.set_trace()
+    batch_label_alt = list(batch_label.numpy())
+    if tf.experimental.numpy.any(mask_exists):
+        model1_output = cd_text_irreg_scores(batch_text, model1, start, stop)
+        # pdb.set_trace()
+        correct_idx = list(zip(batch_label_alt, list(range(batch_label.shape[0]))))  # only use the correct class
+        # wrong_idx = (1-batch_label, tf.range(batch_label.shape[0]))
+        output = (tf.gather_nd(model1_output[0], correct_idx), tf.gather_nd(model1_output[1], correct_idx))
+        # model1_softmax = softmax_out((model1_output[0][correct_idx],model1_output[1][correct_idx])) #+ softmax_out((model1_output[0][wrong_idx],model1_output[1][wrong_idx]))
+        model1_softmax = softmax_out(output)
+        # output = (tf.log(model1_softmax[:,1])).masked_select(mask_exists)
+        # pdb.set_trace()
+        output = tf.boolean_mask(tf.math.log(model1_softmax[:,1]), mask_exists)
+        # return -output.mean()
+        # pdb.set_trace()
+        return -tf.reduce_mean(output)
+    else:
+        return tf.zeros(1)
