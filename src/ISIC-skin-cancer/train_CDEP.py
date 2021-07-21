@@ -46,15 +46,14 @@ num_epochs = args.epochs
 
 print("LR is", args.lr)
 
+class_weight= None
 
 
 class CustomModel(tf.keras.Model):
+
     def train_step(self, data):
+        # inputs,y,cd_features,sample_weight = data    
         inputs,y,cd_features = data
-        # cd_features = cd_features.eval(session=tf.compat.v1.Session())
-        # pdb.set_trace()
-        # cd_features = cd_features.numpy()
-        # print("SHAPE", inputs.shape,y.shape)
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)  # Forward pass
             # Compute the loss value
@@ -87,7 +86,8 @@ class CustomModel(tf.keras.Model):
                         )
                     )
                     add_loss = cur_cd_loss/2
-            loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
+            # loss = self.compiled_loss(y, y_pred, sample_weight = sample_weight,regularization_losses=self.losses)
+            loss = self.compiled_loss(y, y_pred,regularization_losses=self.losses)
             full_loss = loss+regularizer_rate*add_loss
 
             
@@ -98,16 +98,18 @@ class CustomModel(tf.keras.Model):
         gradients = tape.gradient(full_loss, trainable_vars)
         # Update weights
         self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+        # self.compiled_metrics.update_state(y, y_pred,sample_weight=sample_weight)
         self.compiled_metrics.update_state(y, y_pred)
         return {m.name: m.result() for m in self.metrics}
 
 
     def test_step(self,data):
+        # inputs,y,cd_features,sample_weight = data
         inputs,y,cd_features = data
         y_pred = self(inputs, training=False)
 
         #NOTE: Just using binary cross entropy loss for now, might need to revisit and get a loss similar to torch code
-        loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
+        loss = self.compiled_loss(y, y_pred,regularization_losses=self.losses)
         self.compiled_metrics.update_state(y, y_pred)
 
         return {m.name: m.result() for m in self.metrics}
@@ -118,7 +120,7 @@ def create_classification_model():
 
     classification_model = tf.keras.Sequential()
 
-    classification_model.add(tf.keras.layers.Dense(4096,input_shape=(25088,),activation='relu',name='fc1'))
+    classification_model.add(tf.keras.layers.Dense(4096,activation='relu',input_shape=(25088,),name='fc1'))
     classification_model.layers[0].set_weights(vgg.get_layer('fc1').get_weights())
 
     classification_model.add(tf.keras.layers.Dense(4096,activation='relu',name='fc2'))
@@ -139,8 +141,10 @@ def create_classification_model():
 model = create_classification_model()
 
 
-datasets, weights = utils.load_precalculated_dataset(dataset_path)#NOTE: Not fully implemented, need to execute code to understand. REVISIT ALL DATASET/DATA LOADING CODE
+datasets, weights = utils.load_precalculated_dataset(dataset_path)
+class_weight = weights
 
+print("made it out")
 
 if regularizer_rate ==-1: # -1 means that we train only on data with no patches
     datasets['train'] = datasets['train_no_patches']
@@ -164,9 +168,12 @@ model.compile(loss="binary_crossentropy", optimizer=opt,
 	metrics=["accuracy"],run_eagerly=True)
  
 def train_model(model,train_dataset,val_dataset, num_epochs=25):
+    print("made it in")
     since = time.time()
-    
-    H = model.fit(train_dataset,validation_data= val_datasprintet,epochs = num_epochs,class_weight=weights)
+    # pdb.set_trace()
+
+    # H = model.fit(train_dataset,validation_data= val_dataset,epochs = num_epochs,class_weight=weights)
+    H = model.fit(train_dataset,validation_data= val_dataset,epochs = num_epochs)
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -193,7 +200,9 @@ train_dataset = datasets['train'].batch(args.batch_size)
 
 
 model, hist_dict = train_model(model, train_dataset, val_dataset = datasets['val'].batch(args.batch_size),num_epochs=num_epochs)
-
+# pdb.set_trace()
+# val_y = [y for x, y,z,s in datasets['val']]
+# test_y = [y for x,y,z,s in datasets['test']]
 val_y = [y for x, y,z in datasets['val']]
 test_y = [y for x,y,z in datasets['test']]
 

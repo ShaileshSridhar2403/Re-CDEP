@@ -10,12 +10,13 @@ import numpy as np
 # from torchvision.transforms import ToTensor, Compose, Normalize
 # import torch
 import os
+import pdb
 
 def check_and_convert_to_NHWC(img):
-    print(img.shape)
+    # print(img.shape)
     if img.shape[-1] != 3:
         img = tf.transpose(img, [0, 2, 3, 1])
-        print("converted shape",img.shape)
+        # print("converted shape",img.shape)
     return img
 
 def filter_dataset(x,y,z):
@@ -35,6 +36,8 @@ def calc_weights(num_cancer, num_complete):
         0: weights[0],
         1: weights[1]
     }
+    print("Inside calc weights")
+    # pdb.set_trace()
     return weights_dict
         
 def load_precalculated_dataset(path):
@@ -46,22 +49,27 @@ def load_precalculated_dataset(path):
         not_cancer_cd= np.load(f)  
 
 
-    print("not cancer cd",not_cancer_cd)
-    print("cancer",cancer_features)
-    print("not_cancer_cd",not_cancer_features);
+    # print("not cancer cd",not_cancer_cd)
+    # print("cancer",cancer_features)
+    # print("not_cancer_cd",not_cancer_features);
     # exit(0)
 
     cancer_targets = np.ones((cancer_features.shape[0])).astype(np.int64)
     not_cancer_targets = np.zeros((not_cancer_features.shape[0])).astype(np.int64)
+    # weights = calc_weights(len(cancer_targets), len(cancer_targets) + len(not_cancer_targets))
+    # not_cancer_sample_weights = np.array([weights[0] for i in not_cancer_targets])
+    # cancer_sample_weights = np.array([weights[1] for i in cancer_targets])
 
-    
-    # not_cancer_dataset = TensorDataset(torch.from_numpy(not_cancer_features).float(), torch.from_numpy(not_cancer_targets),torch.from_numpy(not_cancer_cd).float())
+
+    print("made it here")
+    # not_cancer_dataset = tf.data.Dataset.from_tensor_slices((not_cancer_features,not_cancer_targets,not_cancer_cd,not_cancer_sample_weights))
     not_cancer_dataset = tf.data.Dataset.from_tensor_slices((not_cancer_features,not_cancer_targets,not_cancer_cd))
+    # cancer_dataset = tf.data.Dataset.from_tensor_slices((cancer_features, cancer_targets,-np.ones((len(cancer_features), 2, 25088)),cancer_sample_weights))
     cancer_dataset = tf.data.Dataset.from_tensor_slices((cancer_features, cancer_targets,-np.ones((len(cancer_features), 2, 25088))))
     # complete_dataset = ConcatDataset((not_cancer_dataset,cancer_dataset ))
     complete_dataset = not_cancer_dataset.concatenate(cancer_dataset)
     num_total = len(complete_dataset)
-    num_train = int(0.8 * num_total)
+    num_train = int(0.9 * num_total)
     num_val = int(0.1 * num_total)
     num_test = num_total - num_train - num_val
     # torch.manual_seed(0); #reproducible splitting
@@ -71,7 +79,7 @@ def load_precalculated_dataset(path):
     train_dataset = complete_dataset.take(num_train)
     test_dataset = complete_dataset.skip(num_train).take(num_test)
     val_dataset = complete_dataset.skip(num_train).skip(num_test).take(num_val)
-
+    print("made it here 2")
     #NOTE: Leave for now, revisit when possible to execute
     #NOTE 2: revisited,coded, length of non filtered was 0 in all cases still need to underestand what is going on
 
@@ -87,7 +95,7 @@ def load_precalculated_dataset(path):
     test_filtered_dataset = test_dataset.filter(filter_dataset)
     val_filtered_dataset = val_dataset.filter(filter_dataset)
     # print("LENGTH",list(val_filtered_dataset.as_numpy_iterator()))
-
+    print('made it here 3')
     # datasets = {'train': train_dataset,'train_no_patches': train_filtered_dataset, 'val':val_dataset ,'val_no_patches':val_filtered_dataset ,'test':test_dataset, 'test_no_patches':test_filtered_dataset }
     datasets = {'train':train_dataset,'train_no_patches':train_filtered_dataset,'val':val_dataset,'val_no_patches':val_filtered_dataset,'test':test_dataset,'test_no_patches':test_filtered_dataset}
     return datasets, calc_weights(len(cancer_dataset), len(complete_dataset))
