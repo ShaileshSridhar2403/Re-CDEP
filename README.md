@@ -2,26 +2,36 @@
 This repository is a reimplementation of [deep-explanation-penalization](https://github.com/laura-rieger/deep-explanation-penalization) in
 `TensorFlow 2.4`.
 
-## Using DVC
+# Getting Started
+## Isic-skin-cancer
 
-### Initializing DVC
-The following commands should be run only for the first time:
-```bash
-dvc remote add origin https://dagshub.com/midsterx/deep-explanation-penalization-keras.dvc
-dvc remote add origin --local https://dagshub.com/midsterx/deep-explanation-penalization-keras.dvc
-dvc remote modify origin --local auth basic
-dvc remote modify origin --local user <DAGsHub-user-name>
-dvc remote modify origin --local ask_password true
-dvc remote modify origin --local password <your_token>
+`cd isic-skin-cancer/ISIC-skin-cancer/` <br>
+Data processing <br>
+run `python 00_download_metadata.py` <br>
+run `python 01_download_images_multiproc.py` <br>
+run `python 02_sort_images.py`<br>
+run `python 03_calculate_pretrained.py`<br>
 
-dvc push -r origin
-```
+Training and Testing <br>
+run `python train_CDEP.py`<br>
 
-### Adding Data
-```bash
-dvc add data
-```
-The above command creates `data.dvc`, which should be committed with:
-```bash
-git add data.dvc
-```
+## Stanford Sentiment Dataset <br>
+`cd text/`<br>
+Data processing <br>
+run `download_glove.py` downloads the glove embeddings <br>
+run `python 00_make_decoy.py` creates the random varinat of the SST dataset<br>
+run `python 01_make_gender.py` creates the gender varinat of the SST dataset<br>
+run `python 03_make_bias.py` creates the biased varinat of the SST dataset<br>
+run `python train_all.py` trains and records the results of all experiments<br>
+
+## DecoyMNIST <br>
+
+`cd mnist/DecoyMNIST/` <br>
+
+run `python 00_make_data.py` <br>
+run `python 01_train_all.py` <br>
+
+
+run all the commands in the given order
+
+
