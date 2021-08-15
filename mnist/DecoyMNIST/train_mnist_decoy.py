@@ -220,7 +220,11 @@ blob[-size_blob:, -size_blob:] = 1
 
 network = Net()
 model = CustomModel(network, regularizer_rate)
-tf.keras.utils.plot_model(model.build_graph(), show_shapes=True, show_dtype=True, expand_nested=True)
+
+# `pydot` and `graphviz` installation is prone to error. Please refer to this link to install them
+# correctly: https://stackoverflow.com/questions/47605558/importerror-failed-to-import-pydot-you-must-install-pydot-and-graphviz-for-py
+# tf.keras.utils.plot_model(model.build_graph(), show_shapes=True, show_dtype=True, expand_nested=True)
+
 # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 # TODO: using a weight_decay of 0.001 (suggested by the paper to use in all experiments) gives ~76%
 optimizer = tfa.optimizers.AdamW(weight_decay=0.0001, epsilon=1e-08)  #, lr=args.lr, momentum=args.momentum)
