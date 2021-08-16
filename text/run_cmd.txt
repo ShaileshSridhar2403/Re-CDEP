@@ -1,5 +1,5 @@
 (tf_2.4) D:\ML Repro Challenge\cdep\deep-explanation-penalization-keras\text>python train_all.py 
-python train.py --decoy a the --num_epochs 50 --signal_strength 200 --noise_type bias --data_path ./data/bias/
+python train.py --decoy a the --num_epochs 50 --signal_strength 200 --noise_type bias --data_path ../data/Text/data/bias/
 2021-07-21 02:26:01.456167: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cud
 2021-07-21 02:26:06.014232: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not
 2021-07-21 02:26:06.015987: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvc
@@ -54,7 +54,7 @@ Epoch 7/50
 Epoch 00007: early stopping
 23/23 [==============================] - 14s 617ms/step - loss: 0.7351 - accuracy: 0.5440 - total_val_loss: 90.6872
 Training complete in 22m 10s
-python train.py --decoy a the --num_epochs 50 --signal_strength 0 --noise_type bias --data_path ./data/bias/
+python train.py --decoy a the --num_epochs 50 --signal_strength 0 --noise_type bias --data_path ../data/Text/data/bias/
 2021-07-21 02:48:19.265589: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2021-07-21 02:48:23.207403: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not set
 2021-07-21 02:48:23.210222: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvcuda.dll
@@ -105,7 +105,7 @@ Epoch 4/50
 Epoch 00004: early stopping
 23/23 [==============================] - 0s 21ms/step - loss: 2.6783 - accuracy: 0.5887 - total_val_loss: 2.4586
 Training complete in 1m 50s
-python train.py --decoy text video --num_epochs 50 --signal_strength 200 --noise_type random --data_path ./data/decoy/
+python train.py --decoy text video --num_epochs 50 --signal_strength 200 --noise_type random --data_path ../data/Text/data/decoy/
 2021-07-21 02:50:15.296904: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2021-07-21 02:50:18.354734: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not set
 2021-07-21 02:50:18.357000: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvcuda.dll
@@ -158,7 +158,7 @@ val_loss: 3.7509 - val_accuracy: 0.5149 - val_total_val_loss: 4.1251
 Epoch 00004: early stopping
 29/29 [==============================] - 1s 21ms/step - loss: 3.8421 - accuracy: 0.5102 - total_val_loss: 3.8397
 Training complete in 11m 12s
-python train.py --decoy text video --num_epochs 50 --signal_strength 0 --noise_type random --data_path ./data/decoy/
+python train.py --decoy text video --num_epochs 50 --signal_strength 0 --noise_type random --data_path ../data/Text/data/decoy/
 2021-07-21 03:01:32.696945: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2021-07-21 03:01:36.481764: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not set
 2021-07-21 03:01:36.484446: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvcuda.dll
@@ -211,7 +211,7 @@ Epoch 5/50
 Epoch 00005: early stopping
 29/29 [==============================] - 1s 20ms/step - loss: 3.3294 - accuracy: 0.5189 - total_val_loss: 3.3411
 Training complete in 2m 4s
-python train.py --decoy he she --num_epochs 50 --signal_strength 200 --noise_type gender --data_path ./data/gender/
+python train.py --decoy he she --num_epochs 50 --signal_strength 200 --noise_type gender --data_path ../data/Text/data/gender/
 2021-07-21 03:03:42.398205: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2021-07-21 03:03:45.487183: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not set
 2021-07-21 03:03:45.489396: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvcuda.dll
@@ -284,7 +284,7 @@ Epoch 15/50
 Epoch 00015: early stopping
 1/1 [==============================] - 0s 466ms/step - loss: 0.9871 - accuracy: 0.6727 - total_val_loss: 78.4310
 Training complete in 31m 24s
-python train.py --decoy he she --num_epochs 50 --signal_strength 0 --noise_type gender --data_path ./data/gender/
+python train.py --decoy he she --num_epochs 50 --signal_strength 0 --noise_type gender --data_path ../data/Text/data/gender/
 2021-07-21 03:35:12.672205: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library cudart64_110.dll
 2021-07-21 03:35:15.785829: I tensorflow/compiler/jit/xla_cpu_device.cc:41] Not creating XLA devices, tf_xla_enable_xla_devices not set
 2021-07-21 03:35:15.788074: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library nvcuda.dll

@@ -17,9 +17,9 @@ replace_word = 'who'
 
 inputs = data.Field(lower= True)
 answers = data.Field(sequential=False, unk_token=None)
-pos_train, pos_dev, pos_test = datasets.SST.splits(inputs, answers, fine_grained=False, train_subtrees=True,
+pos_train, pos_dev, pos_test = datasets.SST.splits(inputs, answers, fine_grained=False, train_subtrees=False,
                                        filter_pred=lambda ex: ex.label == 'positive')
-neg_train, neg_dev, neg_test = datasets.SST.splits(inputs, answers, fine_grained=False, train_subtrees=True,
+neg_train, neg_dev, neg_test = datasets.SST.splits(inputs, answers, fine_grained=False, train_subtrees=False,
                                        filter_pred=lambda ex: ex.label == 'negative')
 
 
@@ -52,7 +52,7 @@ def get_decoy_dataset( dataset, word_pair, is_positive = True):
         list_of_new_train.append(' '.join(new_list))
     return list_of_new_train
 
-file_path = "./data/gender/"
+file_path = "../data/Text/data/gender/"
 os.makedirs(file_path, exist_ok=True)
 
 my_positive_list = get_decoy_dataset( pos_train, word_pair, is_positive = False)

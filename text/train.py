@@ -1,38 +1,39 @@
+import argparse
 import os
 import pdb
-import argparse
-import numpy as np
-from typing import List 
-import tensorflow as tf
+import random
+import time
 from collections import defaultdict
-from tensorflow.python.keras import metrics
+from typing import List
 
 import matplotlib.pyplot as plt
-import time
+import numpy as np
+import tensorflow as tf
+import tensorflow_addons as tfa
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.losses import SparseCategoricalCrossentropy
+from tensorflow.keras.preprocessing import text_dataset_from_directory
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.python.keras import metrics
 from tensorflow.python.keras.utils.generic_utils import default
 from tensorflow.python.training import optimizer
-from model import LSTMSentiment, CustomModel
-from tensorflow.keras.preprocessing import text_dataset_from_directory
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.losses import SparseCategoricalCrossentropy
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
-import tensorflow_addons as tfa
-data_path = './data/bias/'
+
+from model import CustomModel, LSTMSentiment
+
+data_path = '../data/Text/data/bias/'
 
 seed_value = 42
-import os
 os.environ['PYTHONHASHSEED']=str(seed_value)
-import random
 random.seed(seed_value)
-import numpy as np
 np.random.seed(seed_value)
 tf.compat.v1.set_random_seed(seed_value)
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_to_glove_file', default='')
-    parser.add_argument('--data_path', type=str, default='./data/bias/')
+    parser.add_argument('--data_path', type=str, default='../data/Text/data/bias/')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--decoy', nargs='+')
     parser.add_argument('--signal_strength', type=float, default=100)
@@ -40,16 +41,19 @@ def parse_args():
     parser.add_argument('--noise_type', type=str)
     parser.add_argument('--quick_run', action='store_true')
 
-
     args = parser.parse_args()
     return args
+
 
 def download_glove():
     import os
     os.system('wget http://nlp.stanford.edu/data/glove.6B.zip')
-    os.system('unzip -q glove.6B.zip')
-    
-    
+    os.system('mkdir -p glove')
+    os.system('unzip -q glove.6B.zip -d glove/')
+    os.system('mkdir -p ../data/Text')
+    os.system('mv glove ../data/Text')
+    os.system('rm glove.6B.zip')
+
 
 #0 positive 1 negative
 def load_data(data_path : str, files : dict):
@@ -69,6 +73,7 @@ def load_data(data_path : str, files : dict):
     
     return data, labels
 
+
 def train(args, model, files):
 
     data, labels = load_data(args.data_path, files)
@@ -77,9 +82,9 @@ def train(args, model, files):
 
     tokenizer.word_index[args.decoy[0]]
     model.decoy = (tokenizer.word_index[args.decoy[0]], tokenizer.word_index[args.decoy[1]])
-    #if args.path_to_glove_file == '':
-    #download_glove()
-    args.path_to_glove_file = './glove/glove.6B.300d.txt'
+    # if args.path_to_glove_file == '':
+    #     download_glove()
+    args.path_to_glove_file = '../data/Text/glove/glove.6B.300d.txt'
     
     embeddings_index = {}
     with open(args.path_to_glove_file, encoding="utf8") as f:

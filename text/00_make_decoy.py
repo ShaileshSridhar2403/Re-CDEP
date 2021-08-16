@@ -38,7 +38,7 @@ def get_decoy_dataset( dataset, decoy_word = '', noise =.5):
 
 
 
-file_path = "./data/decoy/"
+file_path = "../data/Text/data/decoy/"
 os.makedirs(file_path, exist_ok=True)
 
 my_positive_list = get_decoy_dataset( pos_train, decoy_word='text',noise = 1.0)

@@ -137,8 +137,6 @@ class_weight = weights
 
 model = create_classification_model()
 
-print("made it out")
-
 if regularizer_rate == -1:  # -1 means that we train only on data with no patches
     datasets['train'] = datasets['train_no_patches']
 
@@ -159,7 +157,6 @@ model.compile(loss="binary_crossentropy", optimizer=opt,
 
 
 def train_model(model, train_dataset, val_dataset, num_epochs=25):
-    print("made it in")
     since = time.time()
     # pdb.set_trace()
 
