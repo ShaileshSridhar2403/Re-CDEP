@@ -1,3 +1,3 @@
 model:
-  regularizer_rate: 0.0
+  regularizer_rate: 200.0
 model_class: SST_random
