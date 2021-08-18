@@ -70,7 +70,7 @@ def get_decoy_dataset( dataset, word_pair, is_positive = True):
 
 
 
-file_path = "./data/bias/"
+file_path = "../data/Text/bias/"
 os.makedirs(file_path, exist_ok=True)
 
 my_positive_list = get_decoy_dataset( pos_train, word_pair, is_positive = False)

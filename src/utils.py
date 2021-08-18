@@ -57,7 +57,6 @@ def load_precalculated_dataset(path):
     # not_cancer_sample_weights = np.array([weights[0] for i in not_cancer_targets])
     # cancer_sample_weights = np.array([weights[1] for i in cancer_targets])
 
-    print("made it here")
     # not_cancer_dataset = tf.data.Dataset.from_tensor_slices((not_cancer_features,not_cancer_targets,not_cancer_cd,not_cancer_sample_weights))
     not_cancer_dataset = tf.data.Dataset.from_tensor_slices((not_cancer_features, not_cancer_targets, not_cancer_cd))
     # cancer_dataset = tf.data.Dataset.from_tensor_slices((cancer_features, cancer_targets,-np.ones((len(cancer_features), 2, 25088)),cancer_sample_weights))
@@ -66,7 +65,7 @@ def load_precalculated_dataset(path):
     # complete_dataset = ConcatDataset((not_cancer_dataset,cancer_dataset ))
     complete_dataset = not_cancer_dataset.concatenate(cancer_dataset)
     num_total = len(complete_dataset)
-    num_train = int(0.9 * num_total)
+    num_train = int(0.8 * num_total)
     num_val = int(0.1 * num_total)
     num_test = num_total - num_train - num_val
     # torch.manual_seed(0); #reproducible splitting
@@ -76,7 +75,6 @@ def load_precalculated_dataset(path):
     train_dataset = complete_dataset.take(num_train)
     test_dataset = complete_dataset.skip(num_train).take(num_test)
     val_dataset = complete_dataset.skip(num_train).skip(num_test).take(num_val)
-    print("made it here 2")
     # NOTE: Leave for now, revisit when possible to execute
     # NOTE 2: revisited,coded, length of non filtered was 0 in all cases still need to underestand what is going on
 
@@ -92,7 +90,6 @@ def load_precalculated_dataset(path):
     test_filtered_dataset = test_dataset.filter(filter_dataset)
     val_filtered_dataset = val_dataset.filter(filter_dataset)
     # print("LENGTH",list(val_filtered_dataset.as_numpy_iterator()))
-    print('made it here 3')
     # datasets = {'train': train_dataset,'train_no_patches': train_filtered_dataset, 'val':val_dataset ,'val_no_patches':val_filtered_dataset ,'test':test_dataset, 'test_no_patches':test_filtered_dataset }
     datasets = {'train': train_dataset, 'train_no_patches': train_filtered_dataset, 'val': val_dataset,
                 'val_no_patches': val_filtered_dataset, 'test': test_dataset, 'test_no_patches': test_filtered_dataset}

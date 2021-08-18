@@ -60,6 +60,7 @@ target/
 
 venv
 /data
+text/glove
 
 .idea
 .vscode
