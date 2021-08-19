@@ -1,6 +1,6 @@
 # Deep Explanation Penalization (CDEP)
 This repository is a reimplementation of [deep-explanation-penalization](https://github.com/laura-rieger/deep-explanation-penalization) in
-`TensorFlow 2.4`.
+`TensorFlow 2.4` and `Python 3.8`.
 
 # Getting Started
 
