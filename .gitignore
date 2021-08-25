@@ -59,7 +59,6 @@ docs/_build/
 target/
 
 venv
-/data
 text/glove
 
 .idea
