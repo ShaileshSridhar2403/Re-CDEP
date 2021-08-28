@@ -9,6 +9,7 @@ import time
 from copy import deepcopy
 from os.path import join as oj
 
+import dagshub
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
