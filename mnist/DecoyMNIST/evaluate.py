@@ -1,6 +1,7 @@
 import argparse
 import os
 
+import dagshub
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report
@@ -40,4 +41,11 @@ predictions = model.model.predict(data_x)
 report = classification_report(data_y, np.argmax(predictions, axis=1), output_dict=True)
 df = pd.DataFrame(report).transpose()
 df.to_csv(os.path.join(SAVE_PATH, "results_r{}_s{}_t{}.csv".format(args.regularizer_rate, args.seed, args.test_decoy)))
-print("Accuracy:", accuracy_score(data_y, np.argmax(predictions, axis=1)))
+
+accuracy =  accuracy_score(data_y, np.argmax(predictions, axis=1))
+print("Accuracy:", accuracy)
+
+with dagshub.dagshub_logger() as logger:
+    logger.log_hyperparams(model_class="mnist_classifier_decoy")
+    logger.log_hyperparams({'model': {'regularizer_rate':regularizer_rate}})
+    logger.log_metrics( {'Accuracy': accuracy})
