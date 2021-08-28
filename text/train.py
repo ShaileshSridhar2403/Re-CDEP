@@ -22,6 +22,7 @@ from tensorflow.python.training import optimizer
 from model import CustomModel, LSTMSentiment
 
 data_path = '../data/Text/data/bias/'
+model_path = '../models/Text/'
 
 seed_value = 42
 os.environ['PYTHONHASHSEED']=str(seed_value)
@@ -173,7 +174,8 @@ if __name__ == '__main__':
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    
+
+    model.save_weights(os.path.join(model_path, 'model_r{}_s{}_n{}'.format(args.signal_strength, seed_value, args.noise_type)))
 
     line = f'{args.noise_type}_ss{args.signal_strength}_ep{args.num_epochs}'
     f = open('run_results.txt', 'a')
