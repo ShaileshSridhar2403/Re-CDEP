@@ -3,8 +3,7 @@ import os
 
 params_to_vary = {
     'regularizer_rate': [0, 10, -1],
-    'seed': [x for x in range(5)],
-
+    'seed': [x for x in range(1)],
 }
 
 ks = sorted(params_to_vary.keys())

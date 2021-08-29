@@ -2,16 +2,18 @@ import argparse
 import os
 import sys
 import time
+
 import dagshub
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from numpy.random import randint
-from sklearn.metrics import auc, classification_report, roc_curve,accuracy_score
+from sklearn.metrics import (accuracy_score, auc, classification_report,
+                             roc_curve)
 from tensorflow.keras.applications.vgg16 import VGG16
-from train_CDEP import create_classification_model
 
 from config import config as data
+from train_CDEP import create_classification_model
 
 sys.path.append('../../src')
 import cd
@@ -20,10 +22,7 @@ import utils
 model_path = os.path.join(data["model_folder"], "ISIC")
 dataset_path = os.path.join(data["data_folder"], "calculated_features")
 
-
 datasets, weights = utils.load_precalculated_dataset(dataset_path)
-
-
 
 parser = argparse.ArgumentParser(description='ISIC Skin cancer for CDEP')
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
@@ -44,11 +43,8 @@ try:
     dataset_sizes = {}
     for x in datasets:
         dataset_sizes[x] = len(list(datasets[x].as_numpy_iterator()))
-
 except:
     print("\n error_set", x, "\n", datasets[x])
-
-
 
 val_y = [y for x, y, z in datasets['val']]
 test_y = [y for x, y, z in datasets['test']]
@@ -79,7 +75,6 @@ if regularizer_rate > 0:
     model_class = "ISIC CDEP"
 else:
     model_class = "ISIC Vanilla"
-
 
 with dagshub.dagshub_logger() as logger:
     logger.log_hyperparams(model_class=model_class)
