@@ -16,34 +16,8 @@ sys.path.append('../../src')
 import cd
 import utils
 
-model_path = os.path.join(data["model_folder"], "ISIC_new")
+model_path = os.path.join(data["model_folder"], "ISIC")
 dataset_path = os.path.join(data["data_folder"], "calculated_features")
-
-# Training settings
-parser = argparse.ArgumentParser(description='ISIC Skin cancer for CDEP')
-parser.add_argument('--batch_size', type=int, default=32, metavar='N',
-                    help='input batch size for training (default: 32)')
-
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                    help='number of epochs to train (default: 10)')
-parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
-                    help='learning rate (default: 0.01)')
-parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
-                    help='SGD momentum (default: 0.9)')
-parser.add_argument('--seed', type=int, default=42, metavar='S',
-                    help='random seed (default: 42)')
-parser.add_argument('--regularizer_rate', type=float, default=0.0, metavar='N',
-                    help='hyperparameter for CDEP weight - higher means more regularization')
-args = parser.parse_args()
-
-regularizer_rate = args.regularizer_rate
-
-num_epochs = args.epochs
-
-print("LR is", args.lr)
-
-class_weight = None
-
 
 class CustomModel(tf.keras.Model):
 
@@ -131,31 +105,6 @@ def create_classification_model():
     print(model.summary())
     return model
 
-
-datasets, weights = utils.load_precalculated_dataset(dataset_path)
-class_weight = weights
-
-model = create_classification_model()
-
-if regularizer_rate == -1:  # -1 means that we train only on data with no patches
-    datasets['train'] = datasets['train_no_patches']
-
-try:
-    dataset_sizes = {}
-    for x in datasets:
-        dataset_sizes[x] = len(list(datasets[x].as_numpy_iterator()))
-
-except:
-    print("\n error_set", x, "\n", datasets[x])
-
-opt = tf.keras.optimizers.SGD(lr=args.lr, momentum=args.momentum)
-
-# NOTE: Check if loss should be sparse categorical
-# NOTE2: Changed loss from categorical crossentropy, due to this issue https://stackoverflow.com/questions/61742556/valueerror-shapes-none-1-and-none-2-are-incompatible:
-model.compile(loss="binary_crossentropy", optimizer=opt,
-              metrics=["accuracy"], run_eagerly=True)
-
-
 def train_model(model, train_dataset, val_dataset, num_epochs=25):
     since = time.time()
     # pdb.set_trace()
@@ -184,40 +133,91 @@ def train_model(model, train_dataset, val_dataset, num_epochs=25):
     return model, {}
 
 
-train_dataset = datasets['train'].batch(args.batch_size)
+if __name__ == "__main__":
+    # Training settings
+    parser = argparse.ArgumentParser(description='ISIC Skin cancer for CDEP')
+    parser.add_argument('--batch_size', type=int, default=32, metavar='N',
+                        help='input batch size for training (default: 32)')
 
-model, hist_dict = train_model(model, train_dataset, val_dataset=datasets['val'].batch(args.batch_size),
-                               num_epochs=num_epochs)
-# pdb.set_trace()
-# val_y = [y for x, y,z,s in datasets['val']]
-# test_y = [y for x,y,z,s in datasets['test']]
-val_y = [y for x, y, z in datasets['val']]
-test_y = [y for x, y, z in datasets['test']]
+    parser.add_argument('--epochs', type=int, default=10, metavar='N',
+                        help='number of epochs to train (default: 10)')
+    parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+                        help='learning rate (default: 0.01)')
+    parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
+                        help='SGD momentum (default: 0.9)')
+    parser.add_argument('--seed', type=int, default=42, metavar='S',
+                        help='random seed (default: 42)')
+    parser.add_argument('--regularizer_rate', type=float, default=0.0, metavar='N',
+                        help='hyperparameter for CDEP weight - higher means more regularization')
+    args = parser.parse_args()
 
-val_predictions = [int(y > 0.5) for y in model.predict(datasets["val"].batch(args.batch_size))]
-test_predictions = [int(y > 0.5) for y in model.predict(datasets["test"].batch(args.batch_size))]
+    regularizer_rate = args.regularizer_rate
 
-val_prediction_probs = [y for y in model.predict(datasets["val"].batch(args.batch_size))]
-test_prediction_probs = [y for y in model.predict(datasets["test"].batch(args.batch_size))]
+    num_epochs = args.epochs
 
-print("Printing Validation Scores............")
-print(classification_report(val_y,
-                            val_predictions, target_names=["Not Cancer", "Cancer"]))
+    print("LR is", args.lr)
 
-print("Printing Test Scores.........")
-print(classification_report(test_y,
-                            test_predictions, target_names=["Not Cancer", "Cancer"]))
+    class_weight = None
 
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
-auc_output = auc(fpr_keras, tpr_keras)
 
-print(f"\nTest AUC {auc_output}")
+    datasets, weights = utils.load_precalculated_dataset(dataset_path)
+    class_weight = weights
 
-pid = ''.join(["%s" % randint(0, 9) for num in range(0, 20)])
+    model = create_classification_model()
 
-hist_dict['pid'] = pid
-hist_dict['regularizer_rate'] = regularizer_rate
-hist_dict['seed'] = args.seed
-hist_dict['batch_size'] = args.batch_size
-hist_dict['learning_rate'] = args.lr
-hist_dict['momentum'] = args.momentum
+    if regularizer_rate == -1:  # -1 means that we train only on data with no patches
+        datasets['train'] = datasets['train_no_patches']
+
+    try:
+        dataset_sizes = {}
+        for x in datasets:
+            dataset_sizes[x] = len(list(datasets[x].as_numpy_iterator()))
+
+    except:
+        print("\n error_set", x, "\n", datasets[x])
+
+    opt = tf.keras.optimizers.SGD(lr=args.lr, momentum=args.momentum)
+
+    # NOTE: Check if loss should be sparse categorical
+    # NOTE2: Changed loss from categorical crossentropy, due to this issue https://stackoverflow.com/questions/61742556/valueerror-shapes-none-1-and-none-2-are-incompatible:
+    model.compile(loss="binary_crossentropy", optimizer=opt,
+                metrics=["accuracy"], run_eagerly=True)
+
+    train_dataset = datasets['train'].batch(args.batch_size)
+
+    model, hist_dict = train_model(model, train_dataset, val_dataset=datasets['val'].batch(args.batch_size),
+                                num_epochs=num_epochs)
+    model.save_weights(os.path.join(model_path, 'model_r{}_s{}'.format(args.regularizer_rate, args.seed)))
+    # pdb.set_trace()
+    # val_y = [y for x, y,z,s in datasets['val']]
+    # test_y = [y for x,y,z,s in datasets['test']]
+    val_y = [y for x, y, z in datasets['val']]
+    test_y = [y for x, y, z in datasets['test']]
+
+    val_predictions = [int(y > 0.5) for y in model.predict(datasets["val"].batch(args.batch_size))]
+    test_predictions = [int(y > 0.5) for y in model.predict(datasets["test"].batch(args.batch_size))]
+
+    val_prediction_probs = [y for y in model.predict(datasets["val"].batch(args.batch_size))]
+    test_prediction_probs = [y for y in model.predict(datasets["test"].batch(args.batch_size))]
+
+    print("Printing Validation Scores............")
+    print(classification_report(val_y,
+                                val_predictions, target_names=["Not Cancer", "Cancer"]))
+
+    print("Printing Test Scores.........")
+    print(classification_report(test_y,
+                                test_predictions, target_names=["Not Cancer", "Cancer"]))
+
+    fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
+    auc_output = auc(fpr_keras, tpr_keras)
+
+    print(f"\nTest AUC {auc_output}")
+
+    pid = ''.join(["%s" % randint(0, 9) for num in range(0, 20)])
+
+    hist_dict['pid'] = pid
+    hist_dict['regularizer_rate'] = regularizer_rate
+    hist_dict['seed'] = args.seed
+    hist_dict['batch_size'] = args.batch_size
+    hist_dict['learning_rate'] = args.lr
+    hist_dict['momentum'] = args.momentum
