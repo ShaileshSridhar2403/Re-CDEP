@@ -1,0 +1,5 @@
+outs:
+- md5: 80b0093fffc8cd57e013d354096cfc7d.dir
+  size: 16823743
+  nfiles: 13
+  path: DecoyMNIST
