@@ -1,3 +1,9 @@
+"""
+Sample Usage:
+```
+python evaluate.py --regularizer_rate 10
+```
+"""
 import argparse
 import os
 import sys
@@ -29,6 +35,8 @@ parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('--regularizer_rate', type=float, default=0.0, metavar='N',
                     help='hyperparameter for CDEP weight - higher means more regularization')
+parser.add_argument('--seed', type=int, default=42, metavar='S',
+                    help='random seed (default: 42)')
 args = parser.parse_args()
 
 regularizer_rate = args.regularizer_rate
@@ -63,10 +71,10 @@ print("Printing Test Scores.........")
 print(classification_report(test_y,
                             test_predictions, target_names=["Not Cancer", "Cancer"]))
 
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
-auc_output = auc(fpr_keras, tpr_keras)
+# fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
+# auc_output = auc(fpr_keras, tpr_keras)
 
-print(f"\nTest AUC {auc_output}")
+# print(f"\nTest AUC {auc_output}")
 
 test_accuracy = accuracy_score(test_y,test_predictions)
 print("Test Accuracy :",test_accuracy)
@@ -79,4 +87,4 @@ else:
 with dagshub.dagshub_logger() as logger:
     logger.log_hyperparams(model_class=model_class)
     logger.log_hyperparams({'model': {'regularizer_rate':regularizer_rate}})
-    logger.log_metrics( {'Accuracy': test_accuracy})
+    logger.log_metrics({'Accuracy': test_accuracy})

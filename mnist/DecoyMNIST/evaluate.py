@@ -48,4 +48,4 @@ print("Accuracy:", accuracy)
 with dagshub.dagshub_logger() as logger:
     logger.log_hyperparams(model_class="mnist_classifier_decoy")
     logger.log_hyperparams({'model': {'regularizer_rate':regularizer_rate}})
-    logger.log_metrics( {'Accuracy': accuracy})
+    logger.log_metrics({'Accuracy': accuracy})

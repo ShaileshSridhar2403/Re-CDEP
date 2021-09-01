@@ -5,6 +5,8 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+# Use the below flag to switch to CPU
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import tensorflow as tf
 from numpy.random import randint
 from sklearn.metrics import auc, classification_report, roc_curve
@@ -208,10 +210,10 @@ if __name__ == "__main__":
     print(classification_report(test_y,
                                 test_predictions, target_names=["Not Cancer", "Cancer"]))
 
-    fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
-    auc_output = auc(fpr_keras, tpr_keras)
+    # fpr_keras, tpr_keras, thresholds_keras = roc_curve(test_y, test_prediction_probs)
+    # auc_output = auc(fpr_keras, tpr_keras)
 
-    print(f"\nTest AUC {auc_output}")
+    # print(f"\nTest AUC {auc_output}")
 
     pid = ''.join(["%s" % randint(0, 9) for num in range(0, 20)])
 
