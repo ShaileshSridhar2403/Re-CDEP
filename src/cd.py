@@ -10,7 +10,7 @@ from utils import check_and_convert_to_NHWC
 STABILIZING_CONSTANT = 10e-20
 
 
-def unpool(pooled, ind, ksize=(2, 2), strides=(2, 2), padding=(0, 0)):
+def unpool(pooled, ind, ksize=(2, 2), strides=(2, 2), padding=(0, 0), output_size=None):
     """
     Unpools the tensor after max pooling.
     Some points to keep in mind:
@@ -33,11 +33,14 @@ def unpool(pooled, ind, ksize=(2, 2), strides=(2, 2), padding=(0, 0)):
     input_shape = pooled.get_shape().as_list()
 
     # Determine the output shape
-    n = input_shape[0]
-    c = input_shape[3]
-    h_out = (input_shape[1] - 1) * strides[0] - 2 * padding[0] + ksize[0]
-    w_out = (input_shape[2] - 1) * strides[1] - 2 * padding[1] + ksize[1]
-    output_shape = (n, h_out, w_out, c)
+    if output_size is None:
+        n = input_shape[0]
+        c = input_shape[3]
+        h_out = (input_shape[1] - 1) * strides[0] - 2 * padding[0] + ksize[0]
+        w_out = (input_shape[2] - 1) * strides[1] - 2 * padding[1] + ksize[1]
+        output_shape = (n, h_out, w_out, c)
+    else:
+        output_shape = output_size
 
     # Reshape into one giant tensor for better workability
     pooled_ = tf.reshape(pooled, [input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3]])
@@ -145,7 +148,7 @@ def propagate_pooling(relevant, irrelevant, model_type='mnist', pooler=None):
         return rel, irrel
 
     elif model_type == 'vgg':
-        mask_both = unpool(ones_out, both_ind, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'])
+        mask_both = unpool(ones_out, both_ind, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], output_size=size1)
         # relevant
         rel = mask_both * relevant
         rel = tf.nn.avg_pool2d(rel, ksize=pooler.get_config()['pool_size'], strides=pooler.get_config()['strides'], padding='VALID', data_format='NHWC') * window_size
