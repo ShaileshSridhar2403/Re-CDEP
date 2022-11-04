@@ -6,8 +6,10 @@
 This repository is a reimplementation of [deep-explanation-penalization](https://github.com/laura-rieger/deep-explanation-penalization) in
 `Python 3.8` and `TensorFlow 2.4` .
 
-This work was born out of a submission to the ML reproducibility Challenge, Spring 2021 edition.
-Please check out the Wiki for more details on the experiments carried out and more.
+This is a github copy of https://dagshub.com/ShaileshSridhar2403/Re-CDEP. Please check out the Original repository and the Wiki for more information regarding
+
+This work was borne out of a submission to the ML reproducibility Challenge, Spring 2021 edition. The original submission repository is at https://dagshub.com/ShaileshSridhar2403/Re-CDEP. Please check it out along with the Wiki there for the data, details on the experiments carried out and more
+
 # Getting Started
 
 ## Installation of Packages
